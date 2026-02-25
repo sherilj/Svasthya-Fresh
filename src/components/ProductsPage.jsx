@@ -120,8 +120,7 @@ export const ALL_PRODUCTS = [
   },
 ];
 
-const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct }) => {
-  const [searchQuery, setSearchQuery] = useState("");
+const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, searchQuery, setSearchQuery }) => {
 
   const categories = ["All", "Honey", "Chikki", "Ghee"];
 

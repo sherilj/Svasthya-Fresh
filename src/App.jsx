@@ -47,6 +47,8 @@ function App() {
   });
   const [deliveryMethod, setDeliveryMethod] = useState("standard");
   const [lastOrderId, setLastOrderId] = useState("#SV-431423");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const handleNavigateToProducts = (category = "All") => {
     console.log('Navigating to products with category:', category);
@@ -220,9 +222,26 @@ function App() {
           </nav>
 
           <div className="header-actions">
-            <button className="icon-btn">
-              <Search size={22} color="#4A4A4A" />
-            </button>
+            <div className={`global-search-container ${isSearchOpen ? 'open' : ''}`}>
+              {isSearchOpen && (
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  className="global-search-input"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    if (currentPage !== "products") {
+                      setCurrentPage("products");
+                    }
+                  }}
+                  autoFocus
+                />
+              )}
+              <button className="icon-btn search-trigger" onClick={() => setIsSearchOpen(!isSearchOpen)}>
+                <Search size={22} color="#4A4A4A" />
+              </button>
+            </div>
             <button className="icon-btn cart-btn" onClick={() => { setCurrentPage("cartPage"); window.scrollTo(0, 0); }}>
               <ShoppingCart size={22} color="#4A4A4A" />
               <span className="cart-badge">{cart.reduce((total, item) => total + item.quantity, 0)}</span>
@@ -246,6 +265,8 @@ function App() {
             activeCategory={activeCategory}
             setActiveCategory={setActiveCategory}
             onViewProduct={handleViewProduct}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
           />
         )}
         {currentPage === "details" && selectedProduct && (
