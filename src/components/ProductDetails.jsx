@@ -1,0 +1,351 @@
+import React, { useState } from "react";
+import {
+    Star,
+    Heart,
+    Share2,
+    ChevronLeft,
+    ChevronRight,
+    Plus,
+    Minus,
+    ShieldCheck,
+    Leaf,
+    Truck,
+    Award,
+    ArrowRight
+} from "lucide-react";
+import { ALL_PRODUCTS } from "./ProductsPage";
+
+// Helper for check circle icon
+const CheckCircle = ({ size, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+        <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+);
+
+const ProductDetails = ({ product, onBack, onViewProduct, onAddToCart, onGoToCart }) => {
+    const [quantity, setQuantity] = useState(1);
+    const [activeTab, setActiveTab] = useState("description");
+
+    if (!product) return null;
+
+    const [mainImage, setMainImage] = useState(product.img);
+
+    const images = [product.img, product.img, product.img, product.img]; // Placeholder for more images
+
+    const tabs = [
+        { id: "description", label: "DESCRIPTION" },
+        { id: "features", label: "FEATURES" },
+        { id: "benefits", label: "BENEFITS" },
+        { id: "uses", label: "USES" },
+        { id: "faqs", label: "FAQS" }
+    ];
+
+    const getDynamicContent = () => {
+        const cat = product.category.toLowerCase();
+        if (cat === "honey") {
+            return {
+                features: [
+                    "100% Raw and Unprocessed",
+                    "Ethically sourced from deep forests",
+                    "No added sugar or preservatives",
+                    "Naturally rich in antioxidants and enzymes",
+                    "Lab-tested for purity and authenticity"
+                ],
+                benefits: [
+                    "Boosts immune system naturally",
+                    "Effective remedy for cough and cold",
+                    "Improves digestion and gut health",
+                    "Provides an instant natural energy boost",
+                    "Helps in weight management and detoxification"
+                ],
+                uses: [
+                    "Mix in warm water with lemon every morning",
+                    "Use as a natural sweetener in teas and smoothies",
+                    "Drizzle over pancakes, waffles, or breakfast bowls",
+                    "Apply topically for natural skin healing",
+                    "Use in salad dressings and marinades"
+                ],
+                faqs: [
+                    { q: "Is this honey pasteurized?", a: "No, our honey is raw and unpasteurized to maintain all its natural nutritional value." },
+                    { q: "Does honey expire?", a: "Pure honey does not expire if stored correctly. It may crystallize, which is a sign of purity." },
+                    { q: "Is it safe for children?", a: "Honey should not be given to infants under 1 year of age." }
+                ]
+            };
+        } else if (cat === "ghee") {
+            return {
+                features: [
+                    "Traditionally Bilona Churned",
+                    "Made from A2 Desi Cow Milk",
+                    "Golden granular texture and rich aroma",
+                    "High smoke point, ideal for cooking",
+                    "No additives or artificial flavors"
+                ],
+                benefits: [
+                    "Rich in fat-soluble vitamins (A, D, E, K)",
+                    "Aids in better nutrient absorption",
+                    "Promotes healthy skin and hair",
+                    "Supports joint health and flexibility",
+                    "Improves brain function and memory"
+                ],
+                uses: [
+                    "Drizzle over hot rotis, dal, and rice",
+                    "Use as a healthy cooking medium for sautéing",
+                    "Apply on toast instead of butter",
+                    "Mix with milk for a nourishing drink",
+                    "Ideal for Ayurvedic medicinal preparations"
+                ],
+                faqs: [
+                    { q: "What is Bilona Ghee?", a: "It's the traditional method where milk is turned into curd, which is then churned to extract butter, and finally boiled to make ghee." },
+                    { q: "Is A2 Ghee easy to digest?", a: "Yes, A2 ghee contains only A2 beta-casein protein which is easier for the human body to digest." },
+                    { q: "Should I refrigerate it?", a: "No refrigeration is required if stored in a cool, dry place in an airtight container." }
+                ]
+            };
+        } else {
+            // Default (Chikki etc)
+            return {
+                features: [
+                    "Made with organic jaggery",
+                    "Contains no liquid glucose or white sugar",
+                    "Crispy texture with high-quality nuts",
+                    "Perfect travel and lunchbox snack",
+                    "Handcrafted using traditional recipes"
+                ],
+                benefits: [
+                    "Clean energy source for physical activity",
+                    "Rich in essential minerals like Iron and Magnesium",
+                    "Healthy alternative to processed candies",
+                    "Satiates sweet cravings naturally",
+                    "Good for bone health due to calcium in sesame/nuts"
+                ],
+                uses: [
+                    "Enjoy as a quick on-the-go snack",
+                    "Pack in school or office lunchboxes",
+                    "Serve as a healthy dessert after meals",
+                    "A perfect companion for tea or coffee",
+                    "Post-workout energy booster"
+                ],
+                faqs: [
+                    { q: "Is it very hard to bite?", a: "Our chikkis have a crisp, brittle crunch and are not overly hard like mass-produced ones." },
+                    { q: "What is the shelf life?", a: "The product remains fresh for up to 3-4 months when stored in an airtight container." },
+                    { q: "Is it gluten-free?", a: "Yes, all our chikki varieties are naturally gluten-free." }
+                ]
+            };
+        }
+    };
+
+    const dynamicContent = getDynamicContent();
+
+    const getTabContent = () => {
+        switch (activeTab) {
+            case "features":
+                return (
+                    <div className="tab-pane">
+                        <h3>Product Features</h3>
+                        <ul className="pd-list">
+                            {dynamicContent.features.map((f, i) => <li key={i}>{f}</li>)}
+                        </ul>
+                    </div>
+                );
+            case "benefits":
+                return (
+                    <div className="tab-pane">
+                        <h3>Key Benefits</h3>
+                        <ul className="pd-list">
+                            {dynamicContent.benefits.map((b, i) => <li key={i}>{b}</li>)}
+                        </ul>
+                    </div>
+                );
+            case "uses":
+                return (
+                    <div className="tab-pane">
+                        <h3>Suggested Uses</h3>
+                        <ul className="pd-list">
+                            {dynamicContent.uses.map((u, i) => <li key={i}>{u}</li>)}
+                        </ul>
+                    </div>
+                );
+            case "faqs":
+                return (
+                    <div className="tab-pane">
+                        <h3>Frequently Asked Questions</h3>
+                        {dynamicContent.faqs.map((f, i) => (
+                            <div key={i} className="faq-item">
+                                <p className="faq-q">{f.q}</p>
+                                <p className="faq-a">{f.a}</p>
+                            </div>
+                        ))}
+                    </div>
+                );
+            default:
+                return (
+                    <div className="tab-pane">
+                        <h3>Product Description</h3>
+                        <p>
+                            {product.desc} Sourced with care to ensure the highest quality and authenticity.
+                        </p>
+                        <p>
+                            Our commitment to purity means you get the best of nature's bounty.
+                            We work directly with local farmers and artisans to bring you products that are as good for you as they are for the earth.
+                        </p>
+                    </div>
+                );
+        }
+    };
+
+    // Related products logic
+    const relatedProducts = ALL_PRODUCTS
+        .filter(p => p.id !== product.id && p.category === product.category)
+        .slice(0, 3);
+
+    return (
+        <div className="product-details-container">
+            {/* Breadcrumb / Back button */}
+            <div className="pd-breadcrumb">
+                <button onClick={onBack} className="back-btn">
+                    <ChevronLeft size={18} /> Back to {product.category}
+                </button>
+            </div>
+
+            <div className="pd-main-grid">
+                {/* Left: Image Gallery */}
+                <div className="pd-gallery">
+                    <div className="pd-main-image">
+                        {product.badgeLeft && <span className="pd-discount-badge">{product.badgeLeft}</span>}
+                        <img src={mainImage} alt={product.name} />
+                    </div>
+                    <div className="pd-thumbnails">
+                        <button className="thumb-nav prev"><ChevronLeft size={16} /></button>
+                        {images.map((img, i) => (
+                            <div
+                                key={i}
+                                className={`thumb ${mainImage === img ? 'active' : ''}`}
+                                onClick={() => setMainImage(img)}
+                            >
+                                <img src={img} alt={`Thumb ${i}`} />
+                            </div>
+                        ))}
+                        <button className="thumb-nav next"><ChevronRight size={16} /></button>
+                    </div>
+                </div>
+
+                {/* Right: Product Info */}
+                <div className="pd-info">
+                    <div className="pd-header">
+                        <span className="pd-cat-label">{product.category.toUpperCase()}</span>
+                        <div className="pd-actions">
+                            <Heart size={20} className="pd-icon" />
+                            <Share2 size={20} className="pd-icon" />
+                        </div>
+                    </div>
+
+                    <h1 className="pd-title">{product.name}</h1>
+
+                    <div className="pd-rating-row">
+                        <div className="pd-stars">
+                            {[...Array(5)].map((_, i) => (
+                                <Star key={i} size={16} fill={i < 4 ? "#FFC107" : (i < product.rating ? "#FFC107" : "none")} color="#FFC107" />
+                            ))}
+                        </div>
+                        <span className="pd-review-count">124 Verified Reviews</span>
+                    </div>
+
+                    <div className="pd-price-row">
+                        <span className="pd-current-price">₹{product.price}</span>
+                        <span className="pd-old-price">₹{product.price + 100}</span>
+                        <span className="pd-save-badge">Save ₹100</span>
+                    </div>
+
+                    <p className="pd-short-desc">
+                        {product.desc} Handpicked and processed naturally to preserve essential nutrients and authentic flavor.
+                    </p>
+
+                    <div className="pd-buy-block">
+                        <div className="pd-quantity-selector">
+                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="qty-btn"><Minus size={16} /></button>
+                            <span className="qty-val">{quantity}</span>
+                            <button onClick={() => setQuantity(quantity + 1)} className="qty-btn"><Plus size={16} /></button>
+                        </div>
+                        <button className="pd-add-to-cart" onClick={() => {
+                            if (onAddToCart) {
+                                for (let i = 0; i < quantity; i++) onAddToCart(product);
+                            }
+                        }}>
+                            ADD TO CART <ChevronRight size={18} />
+                        </button>
+                    </div>
+
+                    <div className="pd-delivery-status">
+                        <span className="status-item"><CheckCircle size={14} color="#1AA60B" /> IN STOCK</span>
+                        <span className="status-item"><Truck size={14} /> SHIPS IN 24 HOURS</span>
+                        <span className="status-item"><ShieldCheck size={14} /> 100% AUTHENTIC</span>
+                    </div>
+
+                    {/* Sidebar / Why Choose Svasthya */}
+                    <div className="pd-why-svasthya">
+                        <h3>Why Choose Svasthya?</h3>
+                        <div className="why-item">
+                            <div className="why-icon"><Leaf size={18} /></div>
+                            <div className="why-text">
+                                <span className="why-label">100% Raw & Pure</span>
+                                <span className="why-sub">Sourced directly from certified ethical farms.</span>
+                            </div>
+                        </div>
+                        <div className="why-item">
+                            <div className="why-icon"><Award size={18} /></div>
+                            <div className="why-text">
+                                <span className="why-label">Lab Tested Quality</span>
+                                <span className="why-sub">Every batch undergoes 24+ rigorous quality checks.</span>
+                            </div>
+                        </div>
+                        <div className="pd-testimonial">
+                            <p>"The purity of their products reminds me of home-made goodness. Truly authentic!"</p>
+                            <div className="test-author">
+                                <span className="author-avatar">RJ</span>
+                                <span className="author-name">Rajesh J.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Tabs Section */}
+            <div className="pd-tabs-section">
+                <div className="pd-tabs-header">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                            onClick={() => setActiveTab(tab.id)}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+                <div className="pd-tabs-content">
+                    {getTabContent()}
+                </div>
+            </div>
+
+            {/* Suggested Products */}
+            <div className="pd-related">
+                <div className="related-header">
+                    <h2>You May Also Like</h2>
+                    <button className="view-all" onClick={onBack}>VIEW ALL</button>
+                </div>
+                <div className="related-grid">
+                    {relatedProducts.map(p => (
+                        <div key={p.id} className="mini-card" onClick={() => onViewProduct(p)} style={{ cursor: 'pointer' }}>
+                            <div className="mini-img"><img src={p.img} alt={p.name} /></div>
+                            <h4>{p.name}</h4>
+                            <p>{p.category.toUpperCase()}</p>
+                            <div className="mini-price">₹{p.price} <ArrowRight size={14} /></div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default ProductDetails;
