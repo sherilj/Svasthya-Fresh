@@ -15,7 +15,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import LandingPage from "./components/LandingPage";
-import ProductsPage from "./components/ProductsPage";
+import ProductsPage, { ALL_PRODUCTS } from "./components/ProductsPage";
 import ProductDetails from "./components/ProductDetails";
 import Cart from "./components/Cart";
 import CartPage from "./components/CartPage";
@@ -224,21 +224,54 @@ function App() {
           <div className="header-actions">
             <div className={`global-search-container ${isSearchOpen ? 'open' : ''}`}>
               {isSearchOpen && (
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  className="global-search-input"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    if (currentPage !== "products") {
-                      setCurrentPage("products");
-                    }
-                  }}
-                  autoFocus
-                />
+                <>
+                  <input
+                    type="text"
+                    placeholder="Search products..."
+                    className="global-search-input"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      if (currentPage !== "products" && currentPage !== "details") {
+                        setCurrentPage("products");
+                      }
+                    }}
+                    autoFocus
+                  />
+                  {searchQuery.length > 0 && (
+                    <div className="search-suggestions">
+                      {ALL_PRODUCTS.filter(p =>
+                        p.name.toLowerCase().includes(searchQuery.toLowerCase())
+                      ).slice(0, 5).map(product => (
+                        <div
+                          key={product.id}
+                          className="suggestion-item"
+                          onClick={() => {
+                            handleViewProduct(product);
+                            setSearchQuery("");
+                            setIsSearchOpen(false);
+                          }}
+                        >
+                          <img src={product.img} alt={product.name} className="suggestion-img" />
+                          <div className="suggestion-info">
+                            <span className="suggestion-name">{product.name}</span>
+                            <span className="suggestion-price">₹{product.price}</span>
+                          </div>
+                        </div>
+                      ))}
+                      {ALL_PRODUCTS.filter(p =>
+                        p.name.toLowerCase().includes(searchQuery.toLowerCase())
+                      ).length === 0 && (
+                          <div className="no-suggestions">No products found</div>
+                        )}
+                    </div>
+                  )}
+                </>
               )}
-              <button className="icon-btn search-trigger" onClick={() => setIsSearchOpen(!isSearchOpen)}>
+              <button className="icon-btn search-trigger" onClick={() => {
+                setIsSearchOpen(!isSearchOpen);
+                if (isSearchOpen) setSearchQuery("");
+              }}>
                 <Search size={22} color="#4A4A4A" />
               </button>
             </div>

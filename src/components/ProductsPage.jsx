@@ -200,15 +200,6 @@ const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, search
             </button>
           ))}
         </div>
-        <div className="search-box">
-          <Search size={18} color="#868889" className="search-icon" />
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
       </div>
 
       {/* Grouped Products */}
