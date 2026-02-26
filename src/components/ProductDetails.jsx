@@ -23,12 +23,13 @@ const CheckCircle = ({ size, color }) => (
     </svg>
 );
 
-const ProductDetails = ({ product, onBack, onViewProduct, onAddToCart, onGoToCart }) => {
+const ProductDetails = ({ product, cart, onBack, onViewProduct, onAddToCart, onGoToCart }) => {
     const [quantity, setQuantity] = useState(1);
     const [activeTab, setActiveTab] = useState("description");
 
     if (!product) return null;
 
+    const [isAdded, setIsAdded] = useState(cart?.some(item => item.id === product?.id) || false);
     const [mainImage, setMainImage] = useState(product.img);
 
     const images = [product.img, product.img, product.img, product.img]; // Placeholder for more images
@@ -264,14 +265,21 @@ const ProductDetails = ({ product, onBack, onViewProduct, onAddToCart, onGoToCar
                         <div className="pd-quantity-selector">
                             <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="qty-btn"><Minus size={16} /></button>
                             <span className="qty-val">{quantity}</span>
-                            <button onClick={() => setQuantity(quantity + 1)} className="qty-btn"><Plus size={16} /></button>
+                            <button onClick={() => {
+                                setQuantity(quantity + 1);
+                                setIsAdded(false);
+                            }} className="qty-btn"><Plus size={16} /></button>
                         </div>
-                        <button className="pd-add-to-cart" onClick={() => {
-                            if (onAddToCart) {
-                                for (let i = 0; i < quantity; i++) onAddToCart(product);
-                            }
-                        }}>
-                            ADD TO CART <ChevronRight size={18} />
+                        <button
+                            className={`pd-add-to-cart ${isAdded ? 'added' : ''}`}
+                            onClick={() => {
+                                if (onAddToCart) {
+                                    for (let i = 0; i < quantity; i++) onAddToCart(product);
+                                    setIsAdded(true);
+                                }
+                            }}
+                        >
+                            {isAdded ? "ADDED TO CART" : "ADD TO CART"} {isAdded ? <CheckCircle size={18} color="#FFF" /> : <ChevronRight size={18} />}
                         </button>
                     </div>
 

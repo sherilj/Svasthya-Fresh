@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, ShieldCheck, Truck } from "lucide-react";
 import ProgressStepper from "./ProgressStepper";
 
 const FALLBACK_ITEMS = [
@@ -68,24 +68,8 @@ const Delivery = ({
         <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
           <div className="rounded-[32px] border border-[#EBEBEB] bg-[#FFFFFF] p-8 shadow-[0_30px_75px_rgba(124,50,37,0.12)]">
             <div className="flex items-center gap-3 text-[#7C3225]">
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#FEF8F0]">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M3 7h18" />
-                  <path d="M3 12h18" />
-                  <path d="M3 17h18" />
-                </svg>
-              </span>
+              <Truck size={24} strokeWidth={1.5} />
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-[#7C3225]">Step 2</p>
                 <h2 className="text-2xl font-semibold text-[#7C3225] font-['Poppins',sans-serif]">
                   Delivery Method
                 </h2>

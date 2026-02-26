@@ -1,7 +1,7 @@
 import React from "react";
 import { Leaf, ShieldCheck, Zap, CheckCircle } from "lucide-react";
 
-const LandingPage = ({ onNavigateToProducts }) => {
+const LandingPage = ({ onNavigateToProducts, scrollToSection, onNavigateToOurStory }) => {
   return (
     <div className="landing-page">
       {/* Hero Section */}
@@ -10,10 +10,11 @@ const LandingPage = ({ onNavigateToProducts }) => {
           <img src="/1st.png" alt="Ayurvedic Herbs" className="hero-img-main" />
           <div className="hero-content">
             <h1 className="hero-title">Nourish your Body, Naturally</h1>
-            <div className="title-divider">
+            <div className="title-divider"></div>
+            <div className="landing-title-divider" style={{ marginBottom: '18px' }}>
               <span className="diamond"></span>
             </div>
-            <button className="btn-primary" onClick={() => onNavigateToProducts("All")}>Shop Now</button>
+            <button className="btn-secondary" onClick={() => onNavigateToProducts("All")}>Shop Now</button>
           </div>
         </div>
       </section>
@@ -35,10 +36,14 @@ const LandingPage = ({ onNavigateToProducts }) => {
             with transparency, traceability and zero shortcuts
           </p>
           <div className="essentials-buttons">
-            <button className="btn-primary" onClick={() => onNavigateToProducts("All")}>Shop bestsellers &gt;</button>
+            <button className="btn-secondary" onClick={() => onNavigateToProducts("All")}>Shop bestsellers &gt;</button>
             <button className="btn-secondary" onClick={() => {
-              const element = document.getElementById("why-svasthya");
-              if (element) element.scrollIntoView({ behavior: "smooth" });
+              if (typeof scrollToSection === 'function') {
+                scrollToSection('why-svasthya');
+              } else {
+                const element = document.getElementById("why-svasthya");
+                if (element) element.scrollIntoView({ behavior: "smooth" });
+              }
             }}>Why Svasthya Fresh &gt;</button>
           </div>
           <ul className="essentials-features">
@@ -77,7 +82,7 @@ const LandingPage = ({ onNavigateToProducts }) => {
               <h3>Natural Honey</h3>
               <p>Pure & Unprocessed</p>
               <button
-                className="btn-product"
+                className="btn-product btn-product-brown"
                 onClick={() => onNavigateToProducts("Honey")}
               >
                 View Product &gt;
@@ -111,7 +116,7 @@ const LandingPage = ({ onNavigateToProducts }) => {
               <h3>Pure Desi Ghee</h3>
               <p>Pure & Wholesome</p>
               <button
-                className="btn-product"
+                className="btn-product btn-product-brown"
                 onClick={() => onNavigateToProducts("Ghee")}
               >
                 View Product &gt;
@@ -199,8 +204,7 @@ const LandingPage = ({ onNavigateToProducts }) => {
             lifestyle.
           </p>
           <button className="btn-light" onClick={() => {
-            const element = document.getElementById("our-story");
-            if (element) element.scrollIntoView({ behavior: "smooth" });
+            if (onNavigateToOurStory) onNavigateToOurStory();
           }}>Read Our Story &gt;</button>
         </div>
         <div className="promise-image">

@@ -291,7 +291,11 @@ function App() {
         className={`main-content ${["checkout", "delivery", "payment"].includes(currentPage) ? "checkout-mode" : ""} ${currentPage === "orderConfirmation" ? "order-conf-mode" : ""} ${["cartPage", "details", "orderConfirmation"].includes(currentPage) ? "cart-details-mode" : ""} ${currentPage === "products" ? "products-mode" : ""} ${currentPage === "contact" ? "contact-mode" : ""}`}
       >
         {currentPage === "landing" && (
-          <LandingPage onNavigateToProducts={handleNavigateToProducts} />
+          <LandingPage
+            onNavigateToProducts={handleNavigateToProducts}
+            scrollToSection={scrollToSection}
+            onNavigateToOurStory={() => { setCurrentPage("ourStory"); window.scrollTo(0, 0); }}
+          />
         )}
         {currentPage === "products" && (
           <ProductsPage
@@ -306,6 +310,7 @@ function App() {
           <ProductDetails
             key={selectedProduct.id}
             product={selectedProduct}
+            cart={cart}
             onViewProduct={handleViewProduct}
             onBack={() => setCurrentPage("products")}
             onAddToCart={addToCart}

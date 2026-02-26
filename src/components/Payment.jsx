@@ -63,7 +63,6 @@ const Payment = ({
                                 <CreditCard size={20} strokeWidth={1.5} />
                             </span>
                             <div>
-                                <p className="text-xs uppercase tracking-[0.3em] text-[#7C3225]">Step 3</p>
                                 <h2 className="text-2xl font-semibold text-[#7C3225] font-['Poppins',sans-serif]">
                                     Payment Method
                                 </h2>

@@ -1300,6 +1300,8 @@ body {
 .essentials-content {
   flex: 1;
   padding-top: 0;
+  position: relative;
+  z-index: 10;
 }
 
 .essentials-text {
@@ -1470,6 +1472,7 @@ body {
   padding: 80px 20px 80px 20px;
   background-color: #8B3A2B;
   position: relative;
+  margin-top: 60px;
 }
 
 .coming-soon-subtitle-new {
@@ -1563,10 +1566,8 @@ body {
 /* Heritage Banner Section */
 .heritage-banner-section {
   background-color: #FEF8F0;
-  padding: 30px 20px 15px;
+  padding-top: 30px;
   text-align: center;
-  border-bottom: 2px solid #EBEBEB;
-  /* Optional separator to footer */
 }
 
 .heritage-banner-text {
@@ -1580,7 +1581,7 @@ body {
 
 /* Landing Coming Soon Teaser */
 .landing-soon-section {
-  background-color: #FDF5E6;
+  background-color: #FEF8F0;
   /* Cream background */
   padding: 80px 20px 60px;
   position: relative;
@@ -1698,9 +1699,8 @@ body {
   justify-content: space-between;
   padding: 40px;
   gap: 30px;
-  border-top-left-radius: 40px;
-  border-top-right-radius: 40px;
   margin: 0;
+  scroll-margin-top: 100px;
 }
 
 .promise-content {
@@ -2669,6 +2669,7 @@ main.main-content.has-landing {
 
 .category-section-title {
   font-size: 1.8rem;
+  font-weight: 700;
   color: #7C3225;
   margin-bottom: 25px;
   padding-bottom: 10px;
@@ -2998,7 +2999,7 @@ main.main-content.has-landing {
 .pd-delivery-status {
   display: flex;
   flex-wrap: wrap;
-  gap: 15px;
+  justify-content: space-between;
   padding: 4px 0;
   border-top: 1px solid #EBEBEB;
   margin-bottom: 2px;
