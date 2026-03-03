@@ -23,7 +23,7 @@ const CheckCircle = ({ size, color }) => (
     </svg>
 );
 
-const ProductDetails = ({ product, cart, onBack, onViewProduct, onAddToCart, onGoToCart }) => {
+const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddToCart, onGoToCart, onToggleWishlist }) => {
     const [quantity, setQuantity] = useState(1);
     const [activeTab, setActiveTab] = useState("description");
 
@@ -235,7 +235,14 @@ const ProductDetails = ({ product, cart, onBack, onViewProduct, onAddToCart, onG
                     <div className="pd-header">
                         <span className="pd-cat-label">{product.category.toUpperCase()}</span>
                         <div className="pd-actions">
-                            <Heart size={20} className="pd-icon" />
+                            <Heart
+                                size={20}
+                                className={`pd-icon ${wishlist.some(item => item.id === product.id) ? 'active' : ''}`}
+                                onClick={() => onToggleWishlist(product)}
+                                color={wishlist.some(item => item.id === product.id) ? "#7C3225" : "#4A4A4A"}
+                                fill={wishlist.some(item => item.id === product.id) ? "#7C3225" : "none"}
+                                style={{ cursor: 'pointer' }}
+                            />
                             <Share2 size={20} className="pd-icon" />
                         </div>
                     </div>
@@ -335,22 +342,40 @@ const ProductDetails = ({ product, cart, onBack, onViewProduct, onAddToCart, onG
                 </div>
             </div>
 
-            {/* Suggested Products */}
+            {/* Zomato/Swiggy Style Recommended Section */}
             <div className="pd-related">
                 <div className="related-header">
-                    <h2>You May Also Like</h2>
-                    <button className="view-all" onClick={onBack}>VIEW ALL</button>
+                    <h2>Explore More Categories</h2>
+                    <button className="view-all" onClick={onBack}>SEE ALL PRODUCTS</button>
                 </div>
-                <div className="related-grid">
-                    {relatedProducts.map(p => (
-                        <div key={p.id} className="mini-card" onClick={() => onViewProduct(p)} style={{ cursor: 'pointer' }}>
-                            <div className="mini-img"><img src={p.img} alt={p.name} /></div>
-                            <h4>{p.name}</h4>
-                            <p>{p.category.toUpperCase()}</p>
-                            <div className="mini-price">₹{p.price} <ArrowRight size={14} /></div>
+
+                {["Honey", "Chikki", "Ghee"].map(catName => {
+                    const catProducts = ALL_PRODUCTS.filter(p => p.category === catName && p.id !== product.id);
+                    if (catProducts.length === 0) return null;
+
+                    return (
+                        <div key={catName} className="related-category-block">
+                            <h3 className="related-cat-title">More in {catName}</h3>
+                            <div className="related-grid horizontal-scroll">
+                                {catProducts.map(p => (
+                                    <div key={p.id} className="mini-card" onClick={() => onViewProduct(p)} style={{ cursor: 'pointer' }}>
+                                        <div className="mini-img">
+                                            <img src={p.img} alt={p.name} />
+                                            {p.badgeRight && <span className="mini-badge">{p.badgeRight}</span>}
+                                        </div>
+                                        <div className="mini-info">
+                                            <h4>{p.name}</h4>
+                                            <div className="mini-price-row">
+                                                <span className="mini-price">₹{p.price}</span>
+                                                <ArrowRight size={14} className="mini-arrow" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    ))}
-                </div>
+                    );
+                })}
             </div>
         </div>
     );

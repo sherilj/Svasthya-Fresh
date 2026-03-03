@@ -220,7 +220,7 @@ const LandingPage = ({ onNavigateToProducts, scrollToSection, onNavigateToOurSto
           className="story-side-image story-side-image--left"
         />
         <div className="story-center">
-          <h2 className="section-title-brown">Our Story</h2>
+          <h2 className="section-title-brown">Rooted in Tradition</h2>
           <div className="story-divider" aria-hidden="true">
             <span className="story-divider-diamond"></span>
           </div>

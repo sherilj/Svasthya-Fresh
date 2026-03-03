@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Search, Star } from "lucide-react";
+import { Search, Star, Heart } from "lucide-react";
 
 export const ALL_PRODUCTS = [
   {
@@ -120,7 +120,7 @@ export const ALL_PRODUCTS = [
   },
 ];
 
-const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, searchQuery, setSearchQuery }) => {
+const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, searchQuery, setSearchQuery, wishlist, onToggleWishlist }) => {
 
   const categories = ["All", "Honey", "Chikki", "Ghee"];
 
@@ -146,6 +146,16 @@ const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, search
                 {product.badgeRight}
               </span>
             )}
+            <button
+              className={`p-wishlist-btn ${wishlist?.some(item => item.id === product.id) ? 'active' : ''}`}
+              onClick={(e) => { e.stopPropagation(); onToggleWishlist(product); }}
+            >
+              <Heart
+                size={18}
+                fill={wishlist?.some(item => item.id === product.id) ? "#7C3225" : "none"}
+                color={wishlist?.some(item => item.id === product.id) ? "#7C3225" : "#4A4A4A"}
+              />
+            </button>
           </div>
           <div className="p-card-info">
             <div className="p-card-meta">
