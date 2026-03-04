@@ -104,11 +104,15 @@ function App() {
     e.preventDefault();
     setIsLoggingIn(true);
 
+    const formData = new FormData(e.target);
+    const name = formData.get("fullname") || "Guest User";
+    const email = formData.get("email") || "user@example.com";
+
     // Simulate network delay like real apps (FB/Instagram)
     setTimeout(() => {
       const mockUser = {
-        name: e.target.elements[0]?.value || "Guest User",
-        email: e.target.elements[isSignIn ? 0 : 1]?.value || "user@example.com"
+        name: isSignIn ? "Valued Member" : name,
+        email: email
       };
 
       localStorage.setItem("svasthya_user", JSON.stringify(mockUser));
@@ -611,7 +615,12 @@ function App() {
                             <label>Full Name</label>
                             <div className="auth-input">
                               <User size={20} color="#868889" />
-                              <input type="text" placeholder="Your Name" />
+                              <input
+                                name="fullname"
+                                type="text"
+                                placeholder="Your Name"
+                                required
+                              />
                             </div>
                           </div>
                         )}
@@ -620,7 +629,12 @@ function App() {
                           <label>Email Address</label>
                           <div className="auth-input">
                             <Mail size={20} color="#868889" />
-                            <input type="email" placeholder="you@example.com" />
+                            <input
+                              name="email"
+                              type="email"
+                              placeholder="you@example.com"
+                              required
+                            />
                           </div>
                         </div>
 
@@ -629,8 +643,10 @@ function App() {
                           <div className="auth-input">
                             <Lock size={20} color="#868889" />
                             <input
+                              name="password"
                               type={showPassword ? "text" : "password"}
                               placeholder="••••••••"
+                              required
                             />
                             <button
                               type="button"
@@ -652,8 +668,10 @@ function App() {
                             <div className="auth-input">
                               <Lock size={20} color="#868889" />
                               <input
+                                name="confirmPassword"
                                 type={showPassword ? "text" : "password"}
                                 placeholder="••••••••"
+                                required
                               />
                             </div>
                           </div>
