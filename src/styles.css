@@ -1,5 +1,6 @@
 ﻿:root {
-  --bg-color: #FFFFFF;
+  --bg-color: #FDF9F1;
+  /* Changed from #FFFFFF to prevent white flash */
   /* Page outer background */
   --card-bg: #FEF8F0;
   --card-accent-bg: #E7F5E5;
@@ -458,7 +459,7 @@ body {
   border-radius: 50%;
 }
 
-/* Main Content Area - Stabilized to prevent 0.1s flicker */
+/* Main Content Area */
 .main-content {
   flex: 1;
   display: block;
@@ -466,8 +467,6 @@ body {
   min-height: 80vh;
   position: relative;
   background-color: var(--bg-color);
-  transition: padding 0.4s ease-in-out;
-  /* Smooth padding transitions */
 }
 
 /* Specific padding for functional pages (cart, products, etc) */
@@ -482,28 +481,31 @@ body {
   margin: 0 !important;
 }
 
-/* Premium Fade In Effect - Super Smooth */
-.fade-in {
-  animation: smoothFade 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  will-change: opacity, transform;
+/* Page Transition: Pure opacity, no layout shift, no blank frame */
+.page-transition-wrapper {
+  display: contents;
+  /* Does NOT create a new box, so no layout shift */
 }
 
-@keyframes smoothFade {
-  0% {
+.page-transition-wrapper>* {
+  animation: pageAppear 0.2s ease-out forwards;
+}
+
+@keyframes pageAppear {
+  from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(5px);
   }
 
-  100% {
+  to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-.page-transition-wrapper {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+/* Keep fade-in class for legacy - now uses same animation */
+.fade-in {
+  animation: pageAppear 0.2s ease-out forwards;
 }
 
 /* Initial Full-Page Loader */

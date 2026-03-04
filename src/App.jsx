@@ -115,15 +115,12 @@ function App() {
       email: email
     };
 
-    // Subtle delay to allow UI states to sync smoothly
-    setTimeout(() => {
-      localStorage.setItem("svasthya_user", JSON.stringify(mockUser));
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      setIsLoggingIn(false);
-      window.scrollTo(0, 0);
-      setCurrentPage("landing");
-    }, 100);
+    localStorage.setItem("svasthya_user", JSON.stringify(mockUser));
+    setUser(mockUser);
+    setIsAuthenticated(true);
+    setIsLoggingIn(false);
+    window.scrollTo(0, 0);
+    setCurrentPage("landing");
   };
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
@@ -472,7 +469,8 @@ function App() {
       <main
         className={`main-content ${["landing", "ourStory", "contact", "auth"].includes(currentPage) ? "has-landing" : ""} ${["checkout", "delivery", "payment"].includes(currentPage) ? "checkout-mode" : ""} ${currentPage === "orderConfirmation" ? "order-conf-mode" : ""} ${["cartPage", "details", "orderConfirmation"].includes(currentPage) ? "cart-details-mode" : ""} ${currentPage === "products" ? "products-mode" : ""} ${currentPage === "contact" ? "contact-mode" : ""}`}
       >
-        <div key={currentPage} className="page-transition-wrapper fade-in">
+        <div className="page-transition-wrapper">
+
           {currentPage === "landing" && (
             <LandingPage
               onNavigateToProducts={handleNavigateToProducts}
@@ -657,7 +655,7 @@ function App() {
           <p>&copy; 2026 Svasthya Fresh. All rights reserved.</p>
         </div>
       </footer>
-    </div>
+    </div >
   );
 }
 
