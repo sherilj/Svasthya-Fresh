@@ -16,19 +16,22 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
                     <div className="card-right">
                         <div className="form-wrapper">
                             <h1 className="auth-title">
-                                {isSignIn ? "Sign In" : "Create Account"}
+                                {isSignIn ? "Sign In" : "Create\u00A0Account"}
                             </h1>
                             <p className="auth-subtitle">
-                                {isSignIn ? "Don't have an account? " : "Already have an account? "}
-                                <a
-                                    href="#"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        setIsSignIn(!isSignIn);
-                                    }}
-                                >
-                                    {isSignIn ? "Sign up" : "Sign in"}
-                                </a>
+                                <span className="no-wrap-inline">
+                                    {isSignIn ? "Don't have an account?" : "Already have an account?"}
+                                    {' '}
+                                    <a
+                                        href="#"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            setIsSignIn(!isSignIn);
+                                        }}
+                                    >
+                                        {isSignIn ? "Sign\u00A0up" : "Sign\u00A0in"}
+                                    </a>
+                                </span>
                             </p>
 
                             <form className="auth-form" onSubmit={handleAuth}>

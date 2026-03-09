@@ -3275,7 +3275,7 @@ main.main-content.has-landing {
 
 .related-main-header-center h2 {
   font-size: 2rem;
-  font-family: var(--serif-heading);
+  font-family: 'Poppins', sans-serif;
   color: #7C3225;
   font-weight: 700;
 }
@@ -3743,10 +3743,10 @@ main.main-content.has-landing {
 
 .contact-hero-title {
   color: #7C3225;
-  font-size: 3.5rem;
+  font-size: 3rem;
   font-weight: 700;
   margin-bottom: 20px;
-  font-family: var(--serif-heading);
+  font-family: 'Poppins', sans-serif;
 }
 
 .hero-divider {
@@ -4887,7 +4887,7 @@ main.main-content.has-landing {
 
 .auth-title {
   font-size: 2.2rem;
-  font-family: var(--serif-heading);
+  font-family: 'Poppins', sans-serif;
   color: #333;
   margin-bottom: 8px;
   font-weight: 700;
@@ -4897,6 +4897,12 @@ main.main-content.has-landing {
   color: #868889;
   font-size: 0.95rem;
   margin-bottom: 40px;
+}
+
+/* Utility to keep small inline phrases on a single line */
+.no-wrap-inline {
+  white-space: nowrap;
+  display: inline-block;
 }
 
 .auth-subtitle a {
