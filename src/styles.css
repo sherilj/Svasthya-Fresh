@@ -56,18 +56,13 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding-top: 95px;
-  /* Added to account for fixed header */
 }
 
 /* Header */
 .header {
   padding: 0 48px;
-  position: fixed;
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
   z-index: 1100;
   height: 95px;
   /* Reduced from 120px */
@@ -1326,8 +1321,7 @@ img {
 .hero-section {
   padding-top: 0;
   padding-bottom: 0;
-  margin-top: 0;
-  /* Reset from -130px */
+  margin-top: -130px;
   margin-bottom: 0;
 }
 
@@ -2667,16 +2661,29 @@ main.main-content.has-landing {
   flex-direction: column;
 }
 
-.p-price-label {
-  font-size: 0.75rem;
+.p-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.p-mrp {
+  font-size: 0.95rem;
   color: #868889;
-  margin-bottom: 4px;
+  text-decoration: line-through;
+  font-weight: 500;
 }
 
 .p-price {
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #7C3225;
+}
+
+.p-discount-text {
+  color: #1AA60B;
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .p-add-btn {
@@ -2764,30 +2771,89 @@ main.main-content.has-landing {
 }
 
 .category-section-title {
-  font-size: 1.8rem;
-  font-weight: 700;
+  font-size: 2rem;
+  font-weight: 800;
   color: #7C3225;
-  margin-bottom: 25px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #FEF8F0;
-  display: inline-block;
+  margin-bottom: 20px;
+  display: block;
+}
+
+.products-slider-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
 }
 
 .products-page-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  flex-direction: row;
   gap: 20px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 20px 10px;
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE/Edge */
+}
+
+.products-page-grid::-webkit-scrollbar {
+  display: none;
+  /* Chrome/Safari */
+}
+
+.slider-arrow {
+  position: absolute;
+  top: 45%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  background-color: #FFF;
+  border: 1px solid #EBEBEB;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  color: #7C3225;
+}
+
+.slider-arrow:hover {
+  background-color: #7C3225;
+  color: #FFF;
+}
+
+.slider-arrow.left {
+  left: -20px;
+}
+
+.slider-arrow.right {
+  right: -20px;
+}
+
+@media (max-width: 768px) {
+  .slider-arrow {
+    display: none;
+    /* Use touch scroll on mobile */
+  }
 }
 
 .p-card-vertical {
   background-color: #FFF;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s ease;
-  border: 1px solid #EBEBEB;
+  transition: all 0.3s ease;
+  border: 1px solid #F0F0F0;
+  width: 285px;
+  flex-shrink: 0;
 }
 
 .p-card-vertical:hover {
@@ -4355,9 +4421,9 @@ main.main-content.has-landing {
     width: 180px;
   }
 
-  /* Hero section — Reset margin as header is fixed and app has padding */
+  /* Hero section — Restore original negative margin */
   .hero-section {
-    margin-top: 0;
+    margin-top: -80px;
   }
 
   /* Essentials section — adjust negative margin for tablet */
@@ -4807,7 +4873,7 @@ main.main-content.has-landing {
   }
 
   .essentials-section {
-    margin-top: 0;
+    margin-top: -80px;
   }
 
   .section-title-large,

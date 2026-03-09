@@ -150,37 +150,46 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const addToCart = (product) => {
+  const addToCart = (product, selectedVariant) => {
     setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.id === product.id);
+      const variantLabel = selectedVariant?.label || 'Standard';
+      const cartItemId = `${product.id}-${variantLabel}`;
+
+      const existingItem = prevCart.find(item => item.cartItemId === cartItemId);
       if (existingItem) {
         return prevCart.map(item =>
-          item.id === product.id
+          item.cartItemId === cartItemId
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       } else {
-        return [...prevCart, { ...product, quantity: 1 }];
+        return [...prevCart, {
+          ...product,
+          cartItemId,
+          selectedVariant: variantLabel,
+          price: selectedVariant?.price || product.price,
+          quantity: 1
+        }];
       }
     });
   };
 
-  const updateQuantity = (productId, newQuantity) => {
+  const updateQuantity = (cartItemId, newQuantity) => {
     if (newQuantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(cartItemId);
       return;
     }
     setCart(prevCart =>
       prevCart.map(item =>
-        item.id === productId
+        item.cartItemId === cartItemId
           ? { ...item, quantity: newQuantity }
           : item
       )
     );
   };
 
-  const removeFromCart = (productId) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== productId));
+  const removeFromCart = (cartItemId) => {
+    setCart(prevCart => prevCart.filter(item => item.cartItemId !== cartItemId));
   };
 
   const toggleWishlist = (product) => {

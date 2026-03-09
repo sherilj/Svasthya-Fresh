@@ -90,7 +90,7 @@
 }
 
 /* SIDE BY SIDE PRODUCT CARDS */
-.products-page-grid {
+/* .products-page-grid {
     display: flex;
     flex-direction: row;
     gap: 20px;
@@ -99,7 +99,7 @@
     padding: 0 20px;
     overflow-x: auto;
     overflow-y: hidden;
-}
+} */
 
 .p-card {
     background-color: #FFF;
@@ -367,4 +367,47 @@
     padding-bottom: 10px;
     border-bottom: 2px solid #FEF8F0;
     display: inline-block;
+}
+
+/* Variant Selector */
+.pd-variant-selector {
+    margin: 24px 0;
+}
+
+.pd-variant-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #000;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.variant-options {
+    display: flex;
+    gap: 12px;
+}
+
+.variant-btn {
+    padding: 10px 20px;
+    border: 2px solid #EBEBEB;
+    background: #FFF;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #4A4A4A;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.variant-btn:hover {
+    border-color: #7C3225;
+    color: #7C3225;
+}
+
+.variant-btn.active {
+    border-color: #7C3225;
+    background-color: #7C3225;
+    color: #FFF;
 }

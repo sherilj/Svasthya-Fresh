@@ -33,27 +33,29 @@ const Cart = ({ cart, onClose, onUpdateQuantity, onRemove }) => {
 
       <div className="cart-items">
         {cart.map((item) => (
-          <div key={item.id} className="cart-item">
+          <div key={item.cartItemId} className="cart-item">
             <div className="cart-item-image">
               <img src={item.img} alt={item.name} />
             </div>
             <div className="cart-item-details">
               <h4>{item.name}</h4>
-              <p className="cart-item-category">{item.category}</p>
+              <p className="cart-item-category">
+                {item.category} {item.selectedVariant && `(${item.selectedVariant})`}
+              </p>
               <p className="cart-item-price">₹{item.price}</p>
             </div>
             <div className="cart-item-quantity">
-              <button 
+              <button
                 className="quantity-btn"
-                onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                onClick={() => onUpdateQuantity(item.cartItemId, item.quantity - 1)}
                 disabled={item.quantity <= 1}
               >
                 <Minus size={16} />
               </button>
               <span className="quantity">{item.quantity}</span>
-              <button 
+              <button
                 className="quantity-btn"
-                onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                onClick={() => onUpdateQuantity(item.cartItemId, item.quantity + 1)}
               >
                 <Plus size={16} />
               </button>
@@ -61,7 +63,7 @@ const Cart = ({ cart, onClose, onUpdateQuantity, onRemove }) => {
             <div className="cart-item-total">
               ₹{item.price * item.quantity}
             </div>
-            <button className="remove-item-btn" onClick={() => onRemove(item.id)}>
+            <button className="remove-item-btn" onClick={() => onRemove(item.cartItemId)}>
               <X size={16} />
             </button>
           </div>

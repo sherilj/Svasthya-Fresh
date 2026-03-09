@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Search, Star, Heart } from "lucide-react";
+import { Search, Star, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 
 export const ALL_PRODUCTS = [
   {
@@ -130,59 +130,84 @@ const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, search
     return acc;
   }, {});
 
-  const renderProductGrid = (products) => (
-    <div className="products-page-grid">
-      {products.map((product) => (
-        <div className="p-card-vertical" key={product.id}>
-          <div className="p-card-image">
-            <img src={product.img} alt={product.name} />
-            {product.badgeLeft && (
-              <span className="p-badge left-badge">{product.badgeLeft}</span>
-            )}
-            {product.badgeRight && (
-              <span
-                className={`p-badge right-badge ${product.badgeRight === "PREMIUM" ? "premium" : ""}`}
-              >
-                {product.badgeRight}
-              </span>
-            )}
-            <button
-              className={`p-wishlist-btn ${wishlist?.some(item => item.id === product.id) ? 'active' : ''}`}
-              onClick={(e) => { e.stopPropagation(); onToggleWishlist(product); }}
-            >
-              <Heart
-                size={18}
-                fill={wishlist?.some(item => item.id === product.id) ? "#7C3225" : "none"}
-                color={wishlist?.some(item => item.id === product.id) ? "#7C3225" : "#4A4A4A"}
-              />
-            </button>
-          </div>
-          <div className="p-card-info">
-            <div className="p-card-meta">
-              <span className="p-cat">{product.category.toUpperCase()}</span>
-              <span className="p-rating">
-                <Star size={12} fill="#FFC107" color="#FFC107" />{" "}
-                {product.rating}
-              </span>
-            </div>
-            <h3 className="p-title">{product.name}</h3>
-            <p className="p-desc">{product.desc}</p>
-            <div className="p-card-footer">
-              <div className="p-price-block">
-                <span className="p-price-label">Price</span>
-                <span className="p-price">₹{product.price}</span>
+  const CategorySection = ({ title, products, onViewProduct, onToggleWishlist, wishlist }) => {
+    const scrollRef = React.useRef(null);
+
+    const scroll = (direction) => {
+      if (scrollRef.current) {
+        const { scrollLeft, clientWidth } = scrollRef.current;
+        const scrollTo = direction === 'left' ? scrollLeft - clientWidth / 2 : scrollLeft + clientWidth / 2;
+        scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+      }
+    };
+
+    return (
+      <div className="category-section">
+        <h2 className="category-section-title">{title}</h2>
+        <div className="products-slider-container">
+          <button className="slider-arrow left" onClick={() => scroll('left')}>
+            <ChevronLeft size={24} />
+          </button>
+          <div className="products-page-grid" ref={scrollRef}>
+            {products.map((product) => (
+              <div className="p-card-vertical" key={product.id}>
+                <div className="p-card-image">
+                  <img src={product.img} alt={product.name} />
+                  {product.badgeLeft && (
+                    <span className="p-badge left-badge">{product.badgeLeft}</span>
+                  )}
+                  {product.badgeRight && (
+                    <span
+                      className={`p-badge right-badge ${product.badgeRight === "PREMIUM" ? "premium" : ""}`}
+                    >
+                      {product.badgeRight}
+                    </span>
+                  )}
+                  <button
+                    className={`p-wishlist-btn ${wishlist?.some(item => item.id === product.id) ? 'active' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); onToggleWishlist(product); }}
+                  >
+                    <Heart
+                      size={18}
+                      fill={wishlist?.some(item => item.id === product.id) ? "#7C3225" : "none"}
+                      color={wishlist?.some(item => item.id === product.id) ? "#7C3225" : "#4A4A4A"}
+                    />
+                  </button>
+                </div>
+                <div className="p-card-info">
+                  <div className="p-card-meta">
+                    <span className="p-cat">{product.category.toUpperCase()}</span>
+                    <span className="p-rating">
+                      <Star size={12} fill="#FFC107" color="#FFC107" />{" "}
+                      {product.rating}
+                    </span>
+                  </div>
+                  <h3 className="p-title">{product.name}</h3>
+                  <p className="p-desc">{product.desc}</p>
+                  <div className="p-card-footer">
+                    <div className="p-price-block">
+                      <div className="p-price-row">
+                        <span className="p-mrp">₹{Math.round(product.price * 1.2)}</span>
+                        <span className="p-price">₹{product.price}</span>
+                      </div>
+                    </div>
+                    <div className="p-card-buttons">
+                      <button className="p-view-btn" onClick={() => onViewProduct(product)}>
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="p-card-buttons">
-                <button className="p-view-btn" onClick={() => onViewProduct(product)}>
-                  View Details
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
+          <button className="slider-arrow right" onClick={() => scroll('right')}>
+            <ChevronRight size={24} />
+          </button>
         </div>
-      ))}
-    </div>
-  );
+      </div>
+    );
+  };
 
   return (
     <div className="products-page">
@@ -216,16 +241,23 @@ const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, search
       <div className="products-sections-wrapper">
         {activeCategory === "All" ? (
           Object.entries(groupedProducts).map(([cat, products]) => (
-            <div key={cat} className="category-section">
-              <h2 className="category-section-title">{cat} Collection</h2>
-              {renderProductGrid(products)}
-            </div>
+            <CategorySection
+              key={cat}
+              title={`${cat} Collection`}
+              products={products}
+              onViewProduct={onViewProduct}
+              onToggleWishlist={onToggleWishlist}
+              wishlist={wishlist}
+            />
           ))
         ) : (
-          <div className="category-section">
-            <h2 className="category-section-title">{activeCategory} Selection</h2>
-            {renderProductGrid(ALL_PRODUCTS.filter(p => p.category === activeCategory && p.name.toLowerCase().includes(searchQuery.toLowerCase())))}
-          </div>
+          <CategorySection
+            title={`${activeCategory} Selection`}
+            products={ALL_PRODUCTS.filter(p => p.category === activeCategory && p.name.toLowerCase().includes(searchQuery.toLowerCase()))}
+            onViewProduct={onViewProduct}
+            onToggleWishlist={onToggleWishlist}
+            wishlist={wishlist}
+          />
         )}
       </div>
 

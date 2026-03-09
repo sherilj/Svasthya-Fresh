@@ -86,7 +86,10 @@ const WishlistPage = ({ wishlist, onAddToCart, onRemove, onViewProduct, onContin
                                 <h3 onClick={() => onViewProduct(product)} style={{ cursor: 'pointer' }}>{product.name}</h3>
                                 <div className="p-card-footer" style={{ marginTop: 'auto' }}>
                                     <div className="p-price-block">
-                                        <span className="p-price">₹{product.price}</span>
+                                        <div className="p-price-row">
+                                            <span className="p-mrp">₹{Math.round(product.price * 1.2)}</span>
+                                            <span className="p-price">₹{product.price}</span>
+                                        </div>
                                     </div>
                                     <button
                                         className={`p-view-btn btn-product ${addedIds.includes(product.id) ? 'is-added' : ''}`}

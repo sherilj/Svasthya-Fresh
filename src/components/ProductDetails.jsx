@@ -137,6 +137,35 @@ const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddT
 
     const dynamicContent = getDynamicContent();
 
+    const getVariants = () => {
+        const cat = product.category.toLowerCase();
+        const basePrice = product.price;
+
+        if (cat === "honey") {
+            return [
+                { label: "250g", price: basePrice, multiplier: 1 },
+                { label: "500g", price: Math.round(basePrice * 1.8), multiplier: 2 }, // Discounted double pack approx
+                { label: "1kg", price: Math.round(basePrice * 3.4), multiplier: 4 }
+            ];
+        } else if (cat === "ghee") {
+            return [
+                { label: "500ml", price: basePrice, multiplier: 1 },
+                { label: "1L", price: Math.round(basePrice * 1.9), multiplier: 2 },
+                { label: "2L", price: Math.round(basePrice * 3.6), multiplier: 4 }
+            ];
+        } else {
+            // Chikki etc
+            return [
+                { label: "200g", price: basePrice, multiplier: 1 },
+                { label: "500g", price: Math.round(basePrice * 2.2), multiplier: 2.5 },
+                { label: "1kg", price: Math.round(basePrice * 4.2), multiplier: 5 }
+            ];
+        }
+    };
+
+    const variants = getVariants();
+    const [selectedVariant, setSelectedVariant] = useState(variants[0]);
+
     const getTabContent = () => {
         switch (activeTab) {
             case "features":
@@ -259,9 +288,27 @@ const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddT
                     </div>
 
                     <div className="pd-price-row">
-                        <span className="pd-current-price">₹{product.price}</span>
-                        <span className="pd-old-price">₹{product.price + 100}</span>
-                        <span className="pd-save-badge">Save ₹100</span>
+                        <span className="pd-current-price">₹{selectedVariant.price}</span>
+                        <span className="pd-old-price">₹{Math.round(selectedVariant.price * 1.2)}</span>
+                        <span className="pd-save-badge">Save ₹{Math.round(selectedVariant.price * 0.2)}</span>
+                    </div>
+
+                    <div className="pd-variant-selector">
+                        <span className="pd-variant-label">Select Quantity:</span>
+                        <div className="variant-options">
+                            {variants.map((v, i) => (
+                                <button
+                                    key={i}
+                                    className={`variant-btn ${selectedVariant.label === v.label ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setSelectedVariant(v);
+                                        setIsAdded(false);
+                                    }}
+                                >
+                                    {v.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     <p className="pd-short-desc">
@@ -281,7 +328,7 @@ const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddT
                             className={`pd-add-to-cart ${isAdded ? 'added' : ''}`}
                             onClick={() => {
                                 if (onAddToCart) {
-                                    for (let i = 0; i < quantity; i++) onAddToCart(product);
+                                    for (let i = 0; i < quantity; i++) onAddToCart(product, selectedVariant);
                                     setIsAdded(true);
                                 }
                             }}

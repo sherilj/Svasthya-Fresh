@@ -3,7 +3,7 @@ import { ShoppingBag, Plus, Minus, X, ArrowRight, Truck, ShieldCheck } from "luc
 
 const FREE_SHIPPING_THRESHOLD = 999;
 
-const CartPage = ({ cart, onUpdateQuantity, onRemove, onContinueShopping, onProceedToCheckout = () => {} }) => {
+const CartPage = ({ cart, onUpdateQuantity, onRemove, onContinueShopping, onProceedToCheckout = () => { } }) => {
   const subtotal = cart.reduce((t, i) => t + i.price * i.quantity, 0);
   const shippingFree = subtotal >= FREE_SHIPPING_THRESHOLD;
   const progress = Math.min((subtotal / FREE_SHIPPING_THRESHOLD) * 100, 100);
@@ -60,33 +60,38 @@ const CartPage = ({ cart, onUpdateQuantity, onRemove, onContinueShopping, onProc
             {/* Cart items */}
             <div className="cp-items-list">
               {cart.map((item) => (
-                <div key={item.id} className="cp-item">
+                <div key={item.cartItemId} className="cp-item">
                   <div className="cp-item-img">
                     <img src={item.img} alt={item.name} />
                   </div>
                   <div className="cp-item-details">
                     <h3 className="cp-item-name">{item.name}</h3>
-                    <span className="cp-item-badge">{item.category?.toUpperCase()}</span>
+                    <div className="cp-item-meta">
+                      <span className="cp-item-badge">{item.category?.toUpperCase()}</span>
+                      {item.selectedVariant && (
+                        <span className="cp-item-variant">Quantity: {item.selectedVariant}</span>
+                      )}
+                    </div>
                     <p className="cp-item-price">₹{item.price}</p>
                   </div>
                   <div className="cp-item-right">
                     <div className="cp-qty-row">
                       <button
                         className="cp-qty-btn"
-                        onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                        onClick={() => onUpdateQuantity(item.cartItemId, item.quantity - 1)}
                       >
                         <Minus size={14} />
                       </button>
                       <span className="cp-qty-val">{item.quantity}</span>
                       <button
                         className="cp-qty-btn"
-                        onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                        onClick={() => onUpdateQuantity(item.cartItemId, item.quantity + 1)}
                       >
                         <Plus size={14} />
                       </button>
                     </div>
                     <p className="cp-item-total">₹{item.price * item.quantity}</p>
-                    <button className="cp-remove-btn" onClick={() => onRemove(item.id)}>
+                    <button className="cp-remove-btn" onClick={() => onRemove(item.cartItemId)}>
                       <X size={13} /> REMOVE
                     </button>
                   </div>
