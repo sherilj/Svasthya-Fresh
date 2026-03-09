@@ -166,7 +166,8 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
                                                 type="text"
                                                 placeholder="Your full name"
                                                 value={name}
-                                                onChange={(e) => setName(e.target.value)}
+                                                onChange={(e) => setName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
+                                                inputMode="text"
                                                 required
                                             />
                                         </div>
@@ -183,9 +184,11 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
                                             type="tel"
                                             placeholder="10-digit number"
                                             value={phone}
-                                            onChange={(e) => setPhone(e.target.value)}
+                                            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                                            inputMode="numeric"
+                                            pattern="\d*"
                                             required
-                                            maxLength={12}
+                                            maxLength={10}
                                             style={{ flex: 1 }}
                                         />
                                     </div>
@@ -200,7 +203,9 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
                                                 type="text"
                                                 placeholder="6-digit OTP"
                                                 value={otp}
-                                                onChange={(e) => setOtp(e.target.value)}
+                                                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                                                inputMode="numeric"
+                                                pattern="\d*"
                                                 maxLength={6}
                                             />
                                         </div>
