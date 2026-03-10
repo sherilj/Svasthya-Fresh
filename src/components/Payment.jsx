@@ -102,14 +102,13 @@ const Payment = ({
                             <div className="flex flex-col gap-4">
                                 {/* Credit / Debit Card Option */}
                                 <div
-                                    className={`rounded-2xl border transition-all duration-200 overflow-hidden ${selectedPayment === "card"
+                                    onClick={() => setSelectedPayment("card")}
+                                    className={`rounded-2xl border transition-all duration-200 overflow-hidden cursor-pointer ${selectedPayment === "card"
                                         ? "border-[#1AA60B] shadow-[0_12px_24px_rgba(26,166,11,0.12)]"
                                         : "border-[#EBEBEB]"
                                         }`}
                                 >
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedPayment("card")}
+                                    <div
                                         className={`flex w-full items-center gap-4 px-5 py-4 text-left ${selectedPayment === "card" ? "bg-[#E7F5E5]" : "bg-[#FEF8F0] hover:bg-[#E7F5E5]"
                                             }`}
                                     >
@@ -126,7 +125,7 @@ const Payment = ({
                                             <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-5" />
                                             <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/Visa.svg" alt="Visa" className="h-5" />
                                         </div>
-                                    </button>
+                                    </div>
 
                                     {selectedPayment === "card" && (
                                         <div className="border-t border-[#1AA60B]/20 bg-[#E7F5E5] px-6 pb-6 pt-4">
@@ -168,10 +167,9 @@ const Payment = ({
                                 </div>
 
                                 {/* UPI Option */}
-                                <button
-                                    type="button"
+                                <div
                                     onClick={() => setSelectedPayment("upi")}
-                                    className={`flex w-full items-center gap-4 rounded-2xl border px-5 py-4 text-left transition-all duration-200 ${selectedPayment === "upi"
+                                    className={`flex w-full items-center gap-4 rounded-2xl border px-5 py-4 text-left transition-all duration-200 cursor-pointer ${selectedPayment === "upi"
                                         ? "border-[#1AA60B] bg-[#E7F5E5] shadow-[0_12px_24px_rgba(26,166,11,0.12)]"
                                         : "border-[#EBEBEB] bg-[#FEF8F0] hover:border-[#1AA60B]"
                                         }`}
@@ -185,13 +183,12 @@ const Payment = ({
                                         {selectedPayment === "upi" && <span className="h-2.5 w-2.5 rounded-full bg-white" />}
                                     </span>
                                     <span className="font-semibold text-[#7C3225]">UPI / Netbanking</span>
-                                </button>
+                                </div>
 
                                 {/* COD Option */}
-                                <button
-                                    type="button"
+                                <div
                                     onClick={() => setSelectedPayment("cod")}
-                                    className={`flex w-full items-center gap-4 rounded-2xl border px-5 py-4 text-left transition-all duration-200 ${selectedPayment === "cod"
+                                    className={`flex w-full items-center gap-4 rounded-2xl border px-5 py-4 text-left transition-all duration-200 cursor-pointer ${selectedPayment === "cod"
                                         ? "border-[#1AA60B] bg-[#E7F5E5] shadow-[0_12px_24px_rgba(26,166,11,0.12)]"
                                         : "border-[#EBEBEB] bg-[#FEF8F0] hover:border-[#1AA60B]"
                                         }`}
@@ -205,7 +202,7 @@ const Payment = ({
                                         {selectedPayment === "cod" && <span className="h-2.5 w-2.5 rounded-full bg-white" />}
                                     </span>
                                     <span className="font-semibold text-[#7C3225]">Cash on Delivery</span>
-                                </button>
+                                </div>
                             </div>
                         </div>
 
@@ -219,7 +216,7 @@ const Payment = ({
                             </button>
                             <button
                                 type="button"
-                                onClick={onPlaceOrder}
+                                onClick={() => onPlaceOrder(selectedPayment)}
                                 className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#7C3225] px-10 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-white shadow-[0_18px_30px_rgba(124,50,37,0.25)] lg:w-auto transition-transform hover:-translate-y-0.5"
                             >
                                 Pay & Place Order <ArrowRight size={18} />

@@ -455,18 +455,19 @@ body {
 
 .cart-badge {
   position: absolute;
-  top: -8px;
-  right: -10px;
+  top: -6px;
+  right: -8px;
   background-color: var(--text-green);
   color: white;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Main Content Area */
@@ -1294,14 +1295,15 @@ img {
   background-color: #1AA60B;
   color: #FFF;
   border: none;
-  padding: 14px 28px;
+  padding: 10px 22px;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   width: auto;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  transition: all 0.2s ease;
   display: inline-block;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
 .btn-product:hover {
@@ -3134,8 +3136,8 @@ main.main-content.has-landing {
 .qty-btn {
   background: none;
   border: none;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3143,19 +3145,19 @@ main.main-content.has-landing {
 }
 
 .qty-val {
-  width: 30px;
+  width: 24px;
   text-align: center;
   font-weight: 600;
 }
 
 .pd-add-to-cart {
-  padding: 0 40px;
+  padding: 0 25px;
   /* Sized by text + padding */
   background-color: #7C3225;
   color: #FFF;
   border: none;
   border-radius: 10px;
-  height: 50px;
+  height: 42px;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -5002,13 +5004,17 @@ main.main-content.has-landing {
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 10px;
+  align-items: flex-start;
+  width: 100%;
 }
 
 .auth-input-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  align-items: flex-start;
+  width: 100%;
 }
 
 .auth-input-group label {
@@ -5028,6 +5034,7 @@ main.main-content.has-landing {
   background: #FFF;
   transition: all 0.3s ease;
   width: 100%;
+  max-width: 320px;
 }
 
 .auth-input:focus-within {
@@ -5044,13 +5051,13 @@ main.main-content.has-landing {
 
 .auth-input input {
   width: 100%;
-  padding: 16px 15px 16px 48px;
+  padding: 12px 15px;
   border: none;
   background: transparent;
-  outline: none;
-  font-family: inherit;
-  font-size: 1.05rem;
+  font-size: 1rem;
   color: #333;
+  outline: none;
+  border-radius: 12px;
 }
 
 
@@ -5065,7 +5072,7 @@ main.main-content.has-landing {
 }
 
 .auth-submit {
-  margin-top: 10px;
+  margin-top: 2px;
   background: #7C3225;
   color: #FFF;
   border: none;
@@ -5098,8 +5105,10 @@ main.main-content.has-landing {
   display: flex;
   align-items: center;
   text-align: center;
-  margin: 30px 0;
+  margin: 10px 0;
   color: #CDBEAF;
+  width: 100%;
+  max-width: 320px;
   font-size: 0.85rem;
 }
 
@@ -5194,20 +5203,22 @@ main.main-content.has-landing {
    This preserves rounded corners, background color and existing controls. */
 .auth-container,
 .signup-container {
-  max-width: 1300px; /* match .header-inner */
+  max-width: 1300px;
+  /* match .header-inner */
   margin: 0 auto;
   width: 100%;
 }
 
 .auth-card {
-  border-radius: 40px; /* preserve rounded corners */
+  border-radius: 40px;
+  /* preserve rounded corners */
 }
 
-.auth-card > .card-left {
+.auth-card>.card-left {
   flex: 0 0 45%;
 }
 
-.auth-card > .card-right {
+.auth-card>.card-right {
   flex: 0 0 55%;
 }
 
@@ -5272,8 +5283,9 @@ main.main-content.has-landing {
 .submit-btn,
 .btn-primary,
 .btn-outline {
-  font-size: 1.05rem !important;
-  padding: 16px 22px !important;
+  font-size: 0.95rem !important;
+  padding: 12px 20px !important;
+  letter-spacing: 0.5px;
 }
 
 /* Ensure social btn text remains prominent */
@@ -5284,6 +5296,7 @@ main.main-content.has-landing {
 }
 
 @media (max-width: 900px) {
+
   .auth-title,
   .form-title {
     font-size: 34px !important;
@@ -5310,12 +5323,16 @@ main.main-content.has-landing {
    - make primary and submit buttons full width
    - allow social outline buttons to flex and fill available width
 */
-.auth-card > .card-right .form-wrapper,
+.auth-card>.card-right .form-wrapper,
 .signup-card .signup-right-inner {
   padding-left: 36px !important;
   padding-right: 36px !important;
   max-width: 860px;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .card-right,
@@ -5339,24 +5356,35 @@ main.main-content.has-landing {
   height: 52px !important;
 }
 
-/* Make create / submit buttons expand to full width of form area */
+/* Make create / submit buttons content-width */
 .btn-primary,
 .auth-submit,
 .submit-btn {
-  width: 100% !important;
+  width: fit-content !important;
   max-width: none !important;
+  display: flex !important;
+  justify-content: flex-start;
 }
 
-/* Let outline/social buttons stretch and share available width */
+.auth-social {
+  display: flex !important;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+/* Let outline/social buttons be content-width */
 .social-buttons .btn-outline,
 .signup .social-buttons .btn-outline,
 .auth-social-btn {
-  flex: 1 1 0 !important;
-  min-width: 0 !important;
+  flex: 0 1 auto !important;
+  width: fit-content !important;
+  padding-left: 15px !important;
+  padding-right: 15px !important;
 }
 
 @media (max-width: 900px) {
-  .auth-card > .card-right .form-wrapper,
+
+  .auth-card>.card-right .form-wrapper,
   .signup-card .signup-right-inner {
     padding-left: 18px !important;
     padding-right: 18px !important;
@@ -5367,4 +5395,83 @@ main.main-content.has-landing {
     padding-left: 12px !important;
     padding-right: 12px !important;
   }
+}
+
+/* My Orders Styles */
+.my-orders-page {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.order-card {
+  transition: all 0.3s ease;
+}
+
+.order-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+}
+
+.order-item img {
+  transition: transform 0.5s ease;
+}
+
+.order-item:hover img {
+  transform: scale(1.1);
+}
+
+@media (max-width: 600px) {
+  .order-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+
+  .order-header>div {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .order-item {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+
+  .order-item div:last-child {
+    width: 100%;
+    text-align: left !important;
+    margin-top: 10px;
+  }
+}
+
+.order-conf-mode {
+  background-color: #FEF8F0;
+}
+
+/* Support Center Styles */
+.support-card {
+  transition: all 0.3s ease;
+}
+
+.support-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 40px rgba(124, 50, 37, 0.08) !important;
+  border-color: #7C3225 !important;
+}
+
+.support-card .arrow {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  opacity: 0.3;
+  transition: all 0.3s ease;
+}
+
+.support-card:hover .arrow {
+  opacity: 1;
+  right: 15px;
+  color: #7C3225;
+}
+
+.support-success {
+  animation: fadeIn 0.6s ease-out;
 }

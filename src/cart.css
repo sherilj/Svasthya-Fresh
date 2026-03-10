@@ -565,22 +565,24 @@
 }
 
 .cp-checkout-btn {
-  width: 100%;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
   background: #7C3225;
   color: white;
   border: none;
-  padding: 15px;
+  padding: 10px 20px;
   border-radius: 8px;
   font-size: 0.9rem;
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.05em;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: background 0.2s;
-  margin-bottom: 16px;
+  transition: all 0.2s;
+  margin-bottom: 20px;
 }
 
 .cp-checkout-btn:hover {

@@ -302,7 +302,6 @@ const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddT
                                     className={`variant-btn ${selectedVariant.label === v.label ? 'active' : ''}`}
                                     onClick={() => {
                                         setSelectedVariant(v);
-                                        setIsAdded(false);
                                     }}
                                 >
                                     {v.label}
@@ -321,7 +320,6 @@ const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddT
                             <span className="qty-val">{quantity}</span>
                             <button onClick={() => {
                                 setQuantity(quantity + 1);
-                                setIsAdded(false);
                             }} className="qty-btn"><Plus size={16} /></button>
                         </div>
                         <button

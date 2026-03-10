@@ -30,6 +30,8 @@ import Payment from "./components/Payment";
 import OrderConfirmation from "./components/OrderConfirmation";
 import WishlistPage from "./components/WishlistPage";
 import AuthPage from "./components/AuthPage";
+import MyOrders from "./components/MyOrders";
+import SupportCenter from "./components/SupportCenter";
 
 function App() {
   const [showPassword, setShowPassword] = useState(false);
@@ -60,6 +62,16 @@ function App() {
   const [user, setUser] = useState(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [wishlist, setWishlist] = useState([]);
+  const [orders, setOrders] = useState(() => {
+    const savedOrders = localStorage.getItem("svasthya_orders");
+    return savedOrders ? JSON.parse(savedOrders) : [];
+  });
+  const [supportInitialOrder, setSupportInitialOrder] = useState(null);
+
+  // Sync orders to localStorage
+  useEffect(() => {
+    localStorage.setItem("svasthya_orders", JSON.stringify(orders));
+  }, [orders]);
 
   // Restore session from localStorage on mount
   useEffect(() => {
@@ -413,6 +425,12 @@ function App() {
                     <span className="user-email-label">{user?.email}</span>
                   </div>
                   <div className="mobile-nav-divider" style={{ margin: '8px 0' }} />
+                  <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage("myOrders"); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                    My Orders
+                  </a>
+                  <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage("support"); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                    Help & Support
+                  </a>
                   <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
                     Sign Out
                   </a>
@@ -482,6 +500,19 @@ function App() {
                 onClick={(e) => { e.preventDefault(); setCurrentPage("contact"); closeMobileMenu(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                 Contact
               </a>
+              {isAuthenticated && (
+                <>
+                  <div className="mobile-nav-divider" />
+                  <a href="#" className={`mobile-nav-link ${currentPage === "myOrders" ? "active" : ""}`}
+                    onClick={(e) => { e.preventDefault(); setCurrentPage("myOrders"); closeMobileMenu(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                    My Orders
+                  </a>
+                  <a href="#" className={`mobile-nav-link ${currentPage === "support" ? "active" : ""}`}
+                    onClick={(e) => { e.preventDefault(); setCurrentPage("support"); closeMobileMenu(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                    Help & Support
+                  </a>
+                </>
+              )}
             </div>
           </nav>
         </div>
@@ -532,6 +563,26 @@ function App() {
               onContinueShopping={() => { setCurrentPage("products"); setActiveCategory("All"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
             />
           )}
+          {currentPage === "myOrders" && (
+            <MyOrders
+              orders={orders}
+              onContinueShopping={() => { setCurrentPage("products"); setActiveCategory("All"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              onViewProduct={handleViewProduct}
+              onContactSupport={(order) => {
+                setSupportInitialOrder(order);
+                setCurrentPage("support");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+          )}
+          {currentPage === "support" && (
+            <SupportCenter
+              orders={orders}
+              ALL_PRODUCTS={ALL_PRODUCTS}
+              initialOrder={supportInitialOrder}
+              onContinueShopping={() => { setCurrentPage("products"); setActiveCategory("All"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            />
+          )}
           {currentPage === "cartPage" && (
             <CartPage
               cart={cart}
@@ -577,9 +628,23 @@ function App() {
                 setCurrentPage("delivery");
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              onPlaceOrder={() => {
+              onPlaceOrder={(method) => {
                 const newOrderId = `#SV-${Math.floor(100000 + Math.random() * 900000)}`;
-                console.log("Order placed! ID:", newOrderId);
+                let methodLabel = "Card Payment";
+                if (method === "cod" || method === "Cash on Delivery") methodLabel = "Cash on Delivery";
+                else if (method === "upi" || method === "UPI / Netbanking") methodLabel = "UPI / Netbanking";
+
+                const newOrder = {
+                  id: newOrderId,
+                  date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+                  items: [...cart],
+                  total: cart.reduce((acc, item) => acc + (item.price * item.quantity), 0) + (deliveryMethod === 'express' ? 150 : 0),
+                  status: 'Processing',
+                  deliveryMethod,
+                  paymentMethod: methodLabel,
+                  customerName: user?.name
+                };
+                setOrders(prev => [newOrder, ...prev]);
                 setLastOrderId(newOrderId);
                 setCart([]);
                 setCurrentPage("orderConfirmation");

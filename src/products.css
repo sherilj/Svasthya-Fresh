@@ -259,12 +259,12 @@
 
 /* View Details Button */
 .p-view-btn {
-    padding: 12px 16px;
+    padding: 8px 14px;
     background-color: #7C3225;
     color: white;
     border: none;
-    border-radius: 8px;
-    font-size: 14px;
+    border-radius: 6px;
+    font-size: 13px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
