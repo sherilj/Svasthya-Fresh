@@ -1,7 +1,7 @@
 import React from "react";
 import { Package, ChevronRight, Calendar, MapPin, Truck } from "lucide-react";
 
-const MyOrders = ({ orders, onContinueShopping, onViewProduct, onContactSupport }) => {
+const MyOrders = ({ orders, onContinueShopping, onViewProduct, onTrackOrder, onContactSupport }) => {
     if (orders.length === 0) {
         return (
             <div className="empty-orders-container fade-in" style={{ padding: '80px 20px', textAlign: 'center', minHeight: '60vh' }}>
@@ -131,7 +131,7 @@ const MyOrders = ({ orders, onContinueShopping, onViewProduct, onContactSupport 
                             <button className="btn-secondary" style={{ padding: '8px 18px', fontSize: '0.85rem' }} onClick={() => onViewProduct(order.items[0])}>
                                 Buy it again
                             </button>
-                            <button className="btn-product" style={{ padding: '8px 18px', fontSize: '0.85rem' }}>
+                            <button className="btn-product" style={{ padding: '8px 18px', fontSize: '0.85rem' }} onClick={() => onTrackOrder && onTrackOrder(order)}>
                                 Track Package
                             </button>
                         </div>

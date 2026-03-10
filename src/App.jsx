@@ -35,6 +35,7 @@ import WishlistPage from "./components/WishlistPage";
 import AuthPage from "./components/AuthPage";
 import MyOrders from "./components/MyOrders";
 import SupportCenter from "./components/SupportCenter";
+import OrderTracking from "./components/OrderTracking";
 
 function App() {
   const [showPassword, setShowPassword] = useState(false);
@@ -88,6 +89,7 @@ function App() {
     return savedOrders ? JSON.parse(savedOrders) : [];
   });
   const [supportInitialOrder, setSupportInitialOrder] = useState(null);
+  const [selectedOrderForTracking, setSelectedOrderForTracking] = useState(null);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState("");
 
   // Sync orders to localStorage
@@ -652,8 +654,27 @@ function App() {
               orders={orders}
               onContinueShopping={() => { setCurrentPage("products"); setActiveCategory("All"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
               onViewProduct={handleViewProduct}
+              onTrackOrder={(order) => {
+                setSelectedOrderForTracking(order);
+                setCurrentPage("orderTracking");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
               onContactSupport={(order) => {
                 setSupportInitialOrder(order);
+                setCurrentPage("support");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+          )}
+          {currentPage === "orderTracking" && (
+            <OrderTracking
+              order={selectedOrderForTracking}
+              onBack={() => {
+                setCurrentPage("myOrders");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              onContactSupport={() => {
+                setSupportInitialOrder(selectedOrderForTracking);
                 setCurrentPage("support");
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
