@@ -59,9 +59,15 @@ function App() {
   const [deliveryMethod, setDeliveryMethod] = useState("standard");
   const [lastOrderId, setLastOrderId] = useState("#SV-431423");
 
-  // Profile state persisted separately
-  // keep profile in-memory only (no localStorage)
-  const [profile, setProfile] = useState({});
+  // Profile state persisted separately (saved to localStorage)
+  const [profile, setProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem("svasthya_profile");
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
   const [showProfileModal, setShowProfileModal] = useState(false);
   // API token persisted in localStorage (easy, insecure) but kept in state for runtime
   const [apiToken, setApiTokenState] = useState(() => {
@@ -115,9 +121,20 @@ function App() {
     // require an auth token set in-memory (via header button)
     const token = apiToken;
     if (!token) {
-      setSaveSuccessMessage("");
-      alert("Missing auth token. Please set the API token via the header button before saving.");
-      throw new Error("Missing auth token");
+      // No remote token — persist locally so profile isn't lost
+      const mergedLocal = { ...(profile || {}), ...newProfile };
+      setProfile(mergedLocal);
+      try { localStorage.setItem("svasthya_profile", JSON.stringify(mergedLocal)); } catch (e) {}
+      setUser(prev => {
+        const updated = { ...(prev || {}), name: mergedLocal.name, email: mergedLocal.email };
+        try { localStorage.setItem("svasthya_user", JSON.stringify(updated)); } catch (e) {}
+        return updated;
+      });
+      setShowProfileModal(false);
+      setSaveSuccessMessage("Profile saved locally");
+      setCurrentPage("landing");
+      setTimeout(() => setSaveSuccessMessage(""), 2500);
+      return;
     }
 
     try {
@@ -138,6 +155,7 @@ function App() {
 
       const merged = { ...(profile || {}), ...serverData };
       setProfile(merged);
+      try { localStorage.setItem("svasthya_profile", JSON.stringify(merged)); } catch (e) {}
       setUser(prev => {
         const updated = { ...(prev || {}), name: merged.name, email: merged.email };
         localStorage.setItem("svasthya_user", JSON.stringify(updated));
@@ -194,6 +212,10 @@ function App() {
       email: email
     };
 
+    // detect whether a saved profile already exists — if not, treat as new user
+    let hadSavedProfile = false;
+    try { hadSavedProfile = !!localStorage.getItem("svasthya_profile"); } catch (e) { hadSavedProfile = false; }
+
     localStorage.setItem("svasthya_user", JSON.stringify(mockUser));
     setUser(mockUser);
     setIsAuthenticated(true);
@@ -204,8 +226,9 @@ function App() {
     // Merge into profile storage if missing
     const merged = { ...(profile || {}), name: mockUser.name || profile?.name, email: mockUser.email || profile?.email };
     setProfile(merged);
-    // Show modal if profile incomplete (missing name or email)
-    if (!merged.name || !merged.email) {
+    try { localStorage.setItem("svasthya_profile", JSON.stringify(merged)); } catch (e) {}
+    // Show modal for brand-new users (no saved profile). Existing users won't see the popup.
+    if (!hadSavedProfile) {
       setShowProfileModal(true);
     }
   };
@@ -225,9 +248,14 @@ function App() {
     setCurrentPage("landing");
     window.scrollTo({ top: 0, behavior: "smooth" });
 
+    // detect whether a saved profile already exists — if not, treat as new user
+    let hadSavedProfile = false;
+    try { hadSavedProfile = !!localStorage.getItem("svasthya_profile"); } catch (e) { hadSavedProfile = false; }
+
     const merged = { ...(profile || {}), name: mockUser.name || profile?.name };
     setProfile(merged);
-    if (!merged.name || !merged.email) {
+    try { localStorage.setItem("svasthya_profile", JSON.stringify(merged)); } catch (e) {}
+    if (!hadSavedProfile) {
       setShowProfileModal(true);
     }
   };
