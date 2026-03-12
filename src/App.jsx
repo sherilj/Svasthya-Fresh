@@ -122,9 +122,61 @@ function App() {
     localStorage.setItem("svasthya_addresses", JSON.stringify(addresses));
   }, [addresses]);
 
-  // Fetch addresses from API
+  // Fetch profile and addresses from API on mount or when token changes
   useEffect(() => {
-    if (!apiToken) return;
+    if (!apiToken) {
+      setAddresses([]);
+      setProfile({});
+      return;
+    }
+
+    const fetchLatestProfile = async () => {
+      try {
+        const res = await fetch("http://65.1.85.74:8082/api/v1/users/profile", {
+          headers: { "Authorization": `Bearer ${apiToken}` }
+        });
+        if (!res.ok) throw new Error("Failed to fetch profile");
+        const json = await res.json();
+        console.log("[Profile SYNC] Raw JSON:", json);
+        
+        const data = json.user || json.data || json;
+        if (data) {
+          // Robust name detection: check for fullName, first+last, username, etc.
+          let detectedName = data.name || data.full_name || data.fullName || data.user_name || data.username || "";
+          if (!detectedName && (data.firstName || data.first_name)) {
+            detectedName = `${data.firstName || data.first_name} ${data.lastName || data.last_name || ""}`.trim();
+          }
+
+          const normalised = {
+            name: detectedName,
+            email: data.email || "",
+            gender: data.gender || "",
+            dob: data.dateOfBirth || data.dob || data.birthDate || "",
+            phone: data.mobileNumber || data.phone || data.mobile || "",
+          };
+          console.log("[Profile SYNC] Normalised:", normalised);
+          setProfile(normalised);
+          localStorage.setItem("svasthya_profile", JSON.stringify(normalised));
+          
+          setUser(prev => {
+            const updated = {
+              ...prev,
+              name: normalised.name || (prev && prev.name) || "Member",
+              email: normalised.email || (prev && prev.email),
+              phone: normalised.phone || (prev && prev.phone) || phone
+            };
+            localStorage.setItem("svasthya_user", JSON.stringify(updated));
+            return updated;
+          });
+        }
+      } catch (err) {
+        console.error("Sync profile error:", err);
+      }
+    };
+
+    fetchLatestProfile();
+
+    // Fetch Addresses
     fetch("http://65.1.85.74:8082/api/v1/addresses", {
       headers: { "Authorization": `Bearer ${apiToken}` }
     })
@@ -133,14 +185,12 @@ function App() {
         return res.json();
       })
       .then(data => {
-        console.log("[Address FETCH] Response:", JSON.stringify(data, null, 2));
         let arrayData = [];
         if (Array.isArray(data)) arrayData = data;
         else if (data && Array.isArray(data.addresses)) arrayData = data.addresses;
         else if (data && Array.isArray(data.data)) arrayData = data.data;
-        
+
         const formatted = arrayData.map(addr => {
-          // Determine the standard type — normalize case for comparison
           const rawType = addr.addressType || addr.type || "home";
           const normalised = rawType.charAt(0).toUpperCase() + rawType.slice(1).toLowerCase();
           const isStandard = ["Home", "Office", "Other"].includes(normalised);
@@ -156,7 +206,7 @@ function App() {
             state: addr.state || "",
             other_type: isStandard ? (addr.otherType || addr.other_type || "") : rawType,
             pincode: addr.pinCode || addr.pincode || "",
-            is_default: addr.isDefault !== undefined ? addr.isDefault : addr.is_default
+            is_default: addr.isDefault !== undefined ? (addr.isDefault === 1 || addr.isDefault === true) : (addr.is_default === 1 || addr.is_default === true)
           };
         });
         setAddresses(formatted);
@@ -224,18 +274,18 @@ function App() {
 
       // Normalise API field names → frontend field names, fallback to what we sent
       const normalised = {
-        name: serverData.name || newProfile.name,
+        name: serverData.name || serverData.full_name || serverData.fullName || newProfile.name,
         email: serverData.email || newProfile.email,
         gender: serverData.gender || newProfile.gender,
-        dob: serverData.dateOfBirth || serverData.dob || newProfile.dob,
-        phone: serverData.mobileNumber || serverData.phone || (profile || {}).phone,
+        dob: serverData.dateOfBirth || serverData.dob || serverData.birthDate || newProfile.dob,
+        phone: serverData.mobileNumber || serverData.phone || serverData.mobile || (profile || {}).phone,
       };
 
       const merged = { ...(profile || {}), ...normalised };
       setProfile(merged);
       try { localStorage.setItem("svasthya_profile", JSON.stringify(merged)); } catch (e) {}
       setUser(prev => {
-        const updated = { ...(prev || {}), name: merged.name, email: merged.email };
+        const updated = { ...(prev || {}), name: merged.name, email: merged.email, phone: merged.phone };
         localStorage.setItem("svasthya_user", JSON.stringify(updated));
         return updated;
       });
@@ -250,6 +300,46 @@ function App() {
       // show a simple error toast; keep modal open so user can retry
       alert("Failed to update profile: " + (err.message || err));
       throw err; // rethrow so callers can handle
+    }
+  };
+
+  // Refresh profile from backend (called when opening profile page)
+  const refreshProfile = async () => {
+    if (!apiToken) return;
+    try {
+      const res = await fetch("http://65.1.85.74:8082/api/v1/users/profile", {
+        headers: { "Authorization": `Bearer ${apiToken}` }
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      const data = json.user || json.data || json;
+      if (data) {
+        let detectedName = data.name || data.full_name || data.fullName || data.user_name || data.username || "";
+        if (!detectedName && (data.firstName || data.first_name)) {
+          detectedName = `${data.firstName || data.first_name} ${data.lastName || data.last_name || ""}`.trim();
+        }
+        const normalised = {
+          name: detectedName,
+          email: data.email || "",
+          gender: data.gender || "",
+          dob: data.dateOfBirth || data.dob || data.birthDate || "",
+          phone: data.mobileNumber || data.phone || data.mobile || "",
+        };
+        setProfile(normalised);
+        localStorage.setItem("svasthya_profile", JSON.stringify(normalised));
+        setUser(prev => {
+          const updated = {
+            ...prev,
+            name: normalised.name || (prev && prev.name) || "Member",
+            email: normalised.email || (prev && prev.email),
+            phone: normalised.phone || (prev && prev.phone)
+          };
+          localStorage.setItem("svasthya_user", JSON.stringify(updated));
+          return updated;
+        });
+      }
+    } catch (err) {
+      console.error("Refresh profile error:", err);
     }
   };
 
@@ -273,8 +363,14 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem("svasthya_user");
+    localStorage.removeItem("svasthya_token");
+    localStorage.removeItem("svasthya_profile");
     setIsAuthenticated(false);
     setUser(null);
+    setApiTokenState(null);
+    setProfile({});
+    setAddresses([]);
+    setCart([]);
     setCurrentPage("auth");
   };
 
@@ -321,30 +417,11 @@ function App() {
       localStorage.setItem("svasthya_token", token);
     }
     
+    // Initial user object from verification step
     let mockUser = {
       name: fullName || "Valued Member",
       phone: phone
     };
-
-    let userProfile = null;
-    if (isSignInAction && token) {
-      try {
-        const res = await fetch("http://65.1.85.74:8082/api/v1/users/profile", {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (res.ok) {
-           const data = await res.json();
-           userProfile = data.user || data.data || data;
-           if (userProfile) {
-             mockUser.name = userProfile.name || mockUser.name;
-             mockUser.email = userProfile.email || mockUser.email;
-             mockUser.phone = userProfile.mobileNumber || userProfile.phone || mockUser.phone;
-           }
-        }
-      } catch (err) {
-        console.error("Error fetching profile", err);
-      }
-    }
 
     localStorage.setItem("svasthya_user", JSON.stringify(mockUser));
     setUser(mockUser);
@@ -353,28 +430,63 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
 
     if (!isSignInAction) {
-      // New user signup - show population popup with only name & phone pre-filled
+      // New user registration flow
       const merged = { name: mockUser.name, phone: mockUser.phone, email: "", gender: "", dob: "" };
       setProfile(merged);
       try { localStorage.setItem("svasthya_profile", JSON.stringify(merged)); } catch (e) {}
       setShowProfileModal(true);
     } else {
-      // Existing user sign in - fetch profile silently, go to home
-      if (userProfile) {
-        const normalised = {
-          name: userProfile.name || mockUser.name,
-          email: userProfile.email,
-          gender: userProfile.gender,
-          dob: userProfile.dateOfBirth || userProfile.dob,
-          phone: userProfile.mobileNumber || userProfile.phone || mockUser.phone,
-        };
-        const merged = { ...(profile || {}), ...normalised };
-        setProfile(merged);
-        try { localStorage.setItem("svasthya_profile", JSON.stringify(merged)); } catch (e) {}
-      } else {
-        const merged = { ...(profile || {}), name: mockUser.name };
-        setProfile(merged);
-        try { localStorage.setItem("svasthya_profile", JSON.stringify(merged)); } catch (e) {}
+      // Existing user sign-in: extract user data from verify-otp response first
+      const userData = responseData?.user || responseData?.data?.user || responseData?.data || {};
+      const initialProfile = {
+        name: userData.name || userData.fullName || userData.full_name || fullName || "Valued Member",
+        email: userData.email || "",
+        gender: userData.gender || "",
+        dob: userData.dateOfBirth || userData.dob || userData.birthDate || "",
+        phone: userData.mobileNumber || userData.phone || userData.mobile || phone,
+      };
+      setProfile(initialProfile);
+      localStorage.setItem("svasthya_profile", JSON.stringify(initialProfile));
+      setUser({ name: initialProfile.name, email: initialProfile.email, phone: initialProfile.phone });
+      localStorage.setItem("svasthya_user", JSON.stringify({ name: initialProfile.name, email: initialProfile.email, phone: initialProfile.phone }));
+
+      // Fetch full profile from backend API for complete/updated data
+      if (token) {
+        try {
+          const res = await fetch("http://65.1.85.74:8082/api/v1/users/profile", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const json = await res.json();
+            console.log("[Auth] Profile Fetch JSON:", json);
+            const data = json.user || json.data || json;
+            if (data) {
+              let detectedName = data.name || data.full_name || data.fullName || data.user_name || data.username || initialProfile.name;
+              if (detectedName === initialProfile.name && (data.firstName || data.first_name)) {
+                detectedName = `${data.firstName || data.first_name} ${data.lastName || data.last_name || ""}`.trim();
+              }
+              const normalised = {
+                name: detectedName,
+                email: data.email || initialProfile.email,
+                gender: data.gender || initialProfile.gender,
+                dob: data.dateOfBirth || data.dob || data.birthDate || initialProfile.dob,
+                phone: data.mobileNumber || data.phone || data.mobile || initialProfile.phone,
+              };
+              console.log("[Auth] Normalised Profile:", normalised);
+              setProfile(normalised);
+              localStorage.setItem("svasthya_profile", JSON.stringify(normalised));
+              const updatedUser = {
+                name: normalised.name || "Valued Member",
+                email: normalised.email || "",
+                phone: normalised.phone || phone,
+              };
+              setUser(updatedUser);
+              localStorage.setItem("svasthya_user", JSON.stringify(updatedUser));
+            }
+          }
+        } catch (err) {
+          console.error("[Auth] Profile fetch failed:", err);
+        }
       }
       setShowProfileModal(false);
     }
@@ -1127,7 +1239,7 @@ function App() {
             />
           )}
           {currentPage === "profile" && (
-            <ProfileDetails profile={profile} onSave={saveProfile} />
+            <ProfileDetails profile={profile} onSave={saveProfile} onRefresh={refreshProfile} />
           )}
           {currentPage === "addresses" && (
             <div className="max-w-4xl mx-auto p-6 address-page-standalone">

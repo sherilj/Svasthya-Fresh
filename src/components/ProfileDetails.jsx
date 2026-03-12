@@ -1,19 +1,25 @@
 import React, { useState, useEffect } from "react";
 import { User, Mail, Edit3, Save } from "lucide-react";
 
-export default function ProfileDetails({ profile = {}, onSave }) {
+export default function ProfileDetails({ profile = {}, onSave, onRefresh }) {
   const [name, setName] = useState(profile.name || "");
   const [email, setEmail] = useState(profile.email || "");
   const [gender, setGender] = useState(profile.gender || "");
   const [dob, setDob] = useState(profile.dob || "");
-  const [phone] = useState(profile.phone || "");
+  const [phone, setPhone] = useState(profile.phone || "");
   const [saving, setSaving] = useState(false);
+
+  // Fetch latest profile from backend when component mounts
+  useEffect(() => {
+    if (onRefresh) onRefresh();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setName(profile.name || "");
     setEmail(profile.email || "");
     setGender(profile.gender || "");
     setDob(profile.dob || "");
+    setPhone(profile.phone || "");
   }, [profile]);
 
   const handleSubmit = async (e) => {

@@ -159,10 +159,16 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
             const token = res.data?.token || res.data?.data?.token || res.data?.user?.token;
             // Also if response contains user name, grab it
             let fetchedName = name.trim();
-            if (isSignIn && res.data?.user?.name) {
-                fetchedName = res.data.user.name;
-            } else if (isSignIn && res.data?.data?.name) {
-                fetchedName = res.data.data.name;
+            if (isSignIn) {
+                fetchedName =
+                    res.data?.user?.name ||
+                    res.data?.data?.name ||
+                    res.data?.data?.user?.name ||
+                    res.data?.name ||
+                    res.data?.user?.fullName ||
+                    res.data?.data?.fullName ||
+                    fetchedName ||
+                    "";
             }
             onOTPVerified && onOTPVerified(phoneKey, isSignIn ? fetchedName : name.trim(), token, isSignIn, res.data);
         } catch (err) {
