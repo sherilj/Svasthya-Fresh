@@ -133,25 +133,32 @@ function App() {
         return res.json();
       })
       .then(data => {
+        console.log("[Address FETCH] Response:", JSON.stringify(data, null, 2));
         let arrayData = [];
         if (Array.isArray(data)) arrayData = data;
         else if (data && Array.isArray(data.addresses)) arrayData = data.addresses;
         else if (data && Array.isArray(data.data)) arrayData = data.data;
         
-        const formatted = arrayData.map(addr => ({
-          ...addr,
-          id: addr.id || addr._id,
-          type: addr.addressType || addr.type || "Home",
-          building_no: addr.buildingNo || addr.building_no || "",
-          building_name: addr.buildingName || addr.building_name || "",
-          street_no: addr.streetNo || addr.street_no || "",
-          area_name: addr.areaName || addr.area_name || "",
-          city: addr.city || "",
-          state: addr.state || "",
-          other_type: addr.otherType || addr.other_type || "",
-          pincode: addr.pinCode || addr.pincode || "",
-          is_default: addr.isDefault !== undefined ? addr.isDefault : addr.is_default
-        }));
+        const formatted = arrayData.map(addr => {
+          // Determine the standard type — normalize case for comparison
+          const rawType = addr.addressType || addr.type || "home";
+          const normalised = rawType.charAt(0).toUpperCase() + rawType.slice(1).toLowerCase();
+          const isStandard = ["Home", "Office", "Other"].includes(normalised);
+          return {
+            ...addr,
+            id: addr.id || addr._id,
+            type: isStandard ? normalised : "Other",
+            building_no: addr.buildingNo || addr.building_no || "",
+            building_name: addr.buildingName || addr.building_name || "",
+            street_no: addr.streetNo || addr.street_no || "",
+            area_name: addr.areaName || addr.area_name || "",
+            city: addr.city || "",
+            state: addr.state || "",
+            other_type: isStandard ? (addr.otherType || addr.other_type || "") : rawType,
+            pincode: addr.pinCode || addr.pincode || "",
+            is_default: addr.isDefault !== undefined ? addr.isDefault : addr.is_default
+          };
+        });
         setAddresses(formatted);
       })
       .catch(err => console.error("Error fetching addresses:", err));
@@ -169,6 +176,8 @@ function App() {
 
   // Persist profile helper - syncs with remote API and localStorage
   const saveProfile = async (newProfile) => {
+    // If saving from the new-user popup modal, navigate to home afterwards
+    const isFromModal = showProfileModal;
     // show transient saving message
     setSaveSuccessMessage("Saving profile...");
 
@@ -185,8 +194,9 @@ function App() {
         return updated;
       });
       setShowProfileModal(false);
-      setSaveSuccessMessage("Profile saved locally");
-      setCurrentPage("profile");
+      setSaveSuccessMessage("Details saved");
+      setCurrentPage("landing");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       setTimeout(() => setSaveSuccessMessage(""), 2500);
       return;
     }
@@ -203,11 +213,25 @@ function App() {
         throw new Error(text || `HTTP ${res.status}`);
       }
 
-      // prefer server response when available
+      // prefer server response when available — unwrap nested response
       let serverData = {};
-      try { serverData = await res.json(); } catch (e) { serverData = newProfile; }
+      try {
+        const json = await res.json();
+        serverData = json.user || json.data || json;
+      } catch (e) {
+        serverData = {};
+      }
 
-      const merged = { ...(profile || {}), ...serverData };
+      // Normalise API field names → frontend field names, fallback to what we sent
+      const normalised = {
+        name: serverData.name || newProfile.name,
+        email: serverData.email || newProfile.email,
+        gender: serverData.gender || newProfile.gender,
+        dob: serverData.dateOfBirth || serverData.dob || newProfile.dob,
+        phone: serverData.mobileNumber || serverData.phone || (profile || {}).phone,
+      };
+
+      const merged = { ...(profile || {}), ...normalised };
       setProfile(merged);
       try { localStorage.setItem("svasthya_profile", JSON.stringify(merged)); } catch (e) {}
       setUser(prev => {
@@ -217,8 +241,9 @@ function App() {
       });
       setShowProfileModal(false);
 
-      setSaveSuccessMessage("Profile changes saved");
-      setCurrentPage("profile");
+      setSaveSuccessMessage("Details saved");
+      setCurrentPage("landing");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       setTimeout(() => setSaveSuccessMessage(""), 2500);
     } catch (err) {
       setSaveSuccessMessage("");
@@ -328,15 +353,22 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
 
     if (!isSignInAction) {
-      // New user signup - show population popup
-      const merged = { ...(profile || {}), name: mockUser.name };
+      // New user signup - show population popup with only name & phone pre-filled
+      const merged = { name: mockUser.name, phone: mockUser.phone, email: "", gender: "", dob: "" };
       setProfile(merged);
       try { localStorage.setItem("svasthya_profile", JSON.stringify(merged)); } catch (e) {}
       setShowProfileModal(true);
     } else {
       // Existing user sign in - fetch profile silently, go to home
       if (userProfile) {
-        const merged = { ...(profile || {}), ...userProfile, name: mockUser.name };
+        const normalised = {
+          name: userProfile.name || mockUser.name,
+          email: userProfile.email,
+          gender: userProfile.gender,
+          dob: userProfile.dateOfBirth || userProfile.dob,
+          phone: userProfile.mobileNumber || userProfile.phone || mockUser.phone,
+        };
+        const merged = { ...(profile || {}), ...normalised };
         setProfile(merged);
         try { localStorage.setItem("svasthya_profile", JSON.stringify(merged)); } catch (e) {}
       } else {
@@ -425,8 +457,8 @@ function App() {
         setSaveSuccessMessage("Saving address...");
         
         const payload = {
-          // If user selected 'Other' and provided a custom name, send that as addressType
           addressType: address.type === 'Other' && address.other_type ? address.other_type : address.type,
+          address_type: address.type === 'Other' && address.other_type ? address.other_type : address.type,
           type: address.type,
           buildingNo: address.building_no,
           building_no: address.building_no,
@@ -446,6 +478,8 @@ function App() {
           is_default: address.is_default ? 1 : 0
         };
 
+        console.log("[Address ADD] Payload:", JSON.stringify(payload, null, 2));
+
         const res = await fetch("http://65.1.85.74:8082/api/v1/addresses", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiToken}` },
@@ -457,17 +491,20 @@ function App() {
         }
         const data = await res.json();
         const apiAddress = data.address || data.data || data;
+        const addRawType = apiAddress.addressType || apiAddress.type || address.type || "home";
+        const addNorm = addRawType.charAt(0).toUpperCase() + addRawType.slice(1).toLowerCase();
+        const addIsStandard = ["Home", "Office", "Other"].includes(addNorm);
         finalAddress = {
           ...apiAddress,
           id: apiAddress.id || apiAddress._id,
-          type: apiAddress.addressType || apiAddress.type || address.type || "Home",
+          type: addIsStandard ? addNorm : "Other",
           building_no: apiAddress.buildingNo || apiAddress.building_no || address.building_no || "",
           building_name: apiAddress.buildingName || apiAddress.building_name || address.building_name || "",
           street_no: apiAddress.streetNo || apiAddress.street_no || address.street_no || "",
           area_name: apiAddress.areaName || apiAddress.area_name || address.area_name || "",
           city: apiAddress.city || address.city || "",
           state: apiAddress.state || address.state || "",
-          other_type: apiAddress.otherType || apiAddress.other_type || address.other_type || "",
+          other_type: addIsStandard ? (apiAddress.otherType || apiAddress.other_type || address.other_type || "") : addRawType,
           pincode: apiAddress.pinCode || apiAddress.pincode || address.pincode || "",
           is_default: apiAddress.isDefault === 1 || apiAddress.isDefault === true || apiAddress.is_default === true
         };
@@ -501,8 +538,8 @@ function App() {
         const addressId = updatedAddress._id || updatedAddress.id;
         
         const payload = {
-          // If user selected 'Other' and provided a custom name, send that as addressType
           addressType: updatedAddress.type === 'Other' && updatedAddress.other_type ? updatedAddress.other_type : updatedAddress.type,
+          address_type: updatedAddress.type === 'Other' && updatedAddress.other_type ? updatedAddress.other_type : updatedAddress.type,
           type: updatedAddress.type,
           buildingNo: updatedAddress.building_no,
           building_no: updatedAddress.building_no,
@@ -522,6 +559,8 @@ function App() {
           is_default: updatedAddress.is_default ? 1 : 0
         };
 
+        console.log("[Address UPDATE] Payload:", JSON.stringify(payload, null, 2));
+
         const res = await fetch(`http://65.1.85.74:8082/api/v1/addresses/${addressId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiToken}` },
@@ -532,18 +571,22 @@ function App() {
           throw new Error(errText || "Failed to update address");
         }
         const data = await res.json();
+        console.log("[Address UPDATE] Response:", JSON.stringify(data, null, 2));
         const apiAddress = data.address || data.data || data;
+        const updRawType = apiAddress.addressType || apiAddress.type || updatedAddress.type || "home";
+        const updNorm = updRawType.charAt(0).toUpperCase() + updRawType.slice(1).toLowerCase();
+        const updIsStandard = ["Home", "Office", "Other"].includes(updNorm);
         finalAddress = {
           ...apiAddress,
           id: apiAddress.id || apiAddress._id,
-          type: apiAddress.addressType || apiAddress.type || updatedAddress.type || "Home",
+          type: updIsStandard ? updNorm : "Other",
           building_no: apiAddress.buildingNo || apiAddress.building_no || updatedAddress.building_no || "",
           building_name: apiAddress.buildingName || apiAddress.building_name || updatedAddress.building_name || "",
           street_no: apiAddress.streetNo || apiAddress.street_no || updatedAddress.street_no || "",
           area_name: apiAddress.areaName || apiAddress.area_name || updatedAddress.area_name || "",
           city: apiAddress.city || updatedAddress.city || "",
           state: apiAddress.state || updatedAddress.state || "",
-          other_type: apiAddress.otherType || apiAddress.other_type || updatedAddress.other_type || "",
+          other_type: updIsStandard ? (apiAddress.otherType || apiAddress.other_type || updatedAddress.other_type || "") : updRawType,
           pincode: apiAddress.pinCode || apiAddress.pincode || updatedAddress.pincode || "",
           is_default: apiAddress.isDefault === 1 || apiAddress.isDefault === true || apiAddress.is_default === true
         };

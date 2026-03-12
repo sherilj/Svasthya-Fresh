@@ -3,6 +3,7 @@ import { User, Mail, Edit3, Check } from "lucide-react";
 
 export default function ProfileModal({ initialProfile = {}, onSave }) {
   const [name, setName] = useState(initialProfile.name || "");
+  const [phone] = useState(initialProfile.phone || "");
   const [email, setEmail] = useState(initialProfile.email || "");
   const [gender, setGender] = useState(initialProfile.gender || "");
   const [dob, setDob] = useState(initialProfile.dob || "");
@@ -55,6 +56,19 @@ export default function ProfileModal({ initialProfile = {}, onSave }) {
             required
           />
         </div>
+
+        {phone && (
+          <>
+            <label className="block text-sm text-gray-600">Mobile number</label>
+            <div className="mt-1 mb-3">
+              <input
+                className="w-full px-3 py-2 border rounded-md bg-gray-50 text-gray-600"
+                value={phone}
+                readOnly
+              />
+            </div>
+          </>
+        )}
 
         <label className="block text-sm text-gray-600">Email</label>
         <div className="mt-1 mb-3">

@@ -6,6 +6,7 @@ export default function ProfileDetails({ profile = {}, onSave }) {
   const [email, setEmail] = useState(profile.email || "");
   const [gender, setGender] = useState(profile.gender || "");
   const [dob, setDob] = useState(profile.dob || "");
+  const [phone] = useState(profile.phone || "");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -50,6 +51,12 @@ export default function ProfileDetails({ profile = {}, onSave }) {
             <label className="block text-sm text-gray-600">Email</label>
             <input type="email" className="mt-1 w-full px-3 py-2 border rounded-md" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
+          {phone && (
+            <div>
+              <label className="block text-sm text-gray-600">Phone</label>
+              <input className="mt-1 w-full px-3 py-2 border rounded-md bg-gray-50 text-gray-600" value={phone} readOnly />
+            </div>
+          )}
           <div>
             <label className="block text-sm text-gray-600">Gender</label>
             <select className="mt-1 w-full px-3 py-2 border rounded-md" value={gender} onChange={(e) => setGender(e.target.value)}>
