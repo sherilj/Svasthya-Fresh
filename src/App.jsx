@@ -117,6 +117,115 @@ function App() {
     localStorage.setItem("svasthya_orders", JSON.stringify(orders));
   }, [orders]);
 
+  // ─── Cart API helpers ───────────────────────────────────────────
+  const API_BASE = "http://65.1.85.74:8082";
+
+  // Backend products & variant ID lookup
+  const [backendProducts, setBackendProducts] = useState([]);
+
+  // Fetch backend products to get real variant IDs
+  useEffect(() => {
+    fetch(`${API_BASE}/api/v1/products`)
+      .then(res => res.ok ? res.json() : Promise.reject("Failed"))
+      .then(json => {
+        const products = json.data || json.products || [];
+        console.log("[Products] Fetched", products.length, "backend products");
+        setBackendProducts(products);
+      })
+      .catch(err => console.error("Error fetching backend products:", err));
+  }, []);
+
+  // Build a lookup: frontend product → backend variant id
+  // Only returns variants with stock (non-null stockQuantity) to avoid backend NullPointerException
+  const getBackendVariantId = (product, variantLabel) => {
+    if (!backendProducts.length) return null;
+    const pName = (product.name || "").toLowerCase();
+    const pCat = (product.category || "").toLowerCase();
+
+    // Find matching backend product by name, then by category keyword
+    const matched = backendProducts.find(bp => {
+      const bpName = (bp.name || "").toLowerCase();
+      return bpName === pName || pName.includes(bpName) || bpName.includes(pName);
+    }) || backendProducts.find(bp => {
+      const bpName = (bp.name || "").toLowerCase();
+      return bpName.includes(pCat) || pCat.includes(bpName);
+    });
+    if (!matched || !matched.variants || !matched.variants.length) return null;
+
+    // Only use variants with non-null stock — null stock crashes the backend
+    const usable = matched.variants.filter(v => v.stockQuantity != null && v.stockQuantity > 0 && v.isActive);
+    if (usable.length === 0) {
+      console.warn("[Cart] Backend product", matched.name, "has no usable variants (all have null/zero stock)");
+      return null;
+    }
+
+    // Try matching by variant label (e.g., "500g" ↔ "500")
+    const normalLabel = (variantLabel || "").toLowerCase().replace(/[^0-9a-z]/g, "");
+    const byLabel = usable.find(v => {
+      const vn = (v.variantName || "").toLowerCase().replace(/[^0-9a-z]/g, "");
+      return vn === normalLabel || normalLabel.includes(vn) || vn.includes(normalLabel);
+    });
+    if (byLabel) return byLabel.id;
+
+    // Default to first usable variant
+    console.log("[Cart] Matched", product.name, "→ backend:", matched.name, "variant:", usable[0].id);
+    return usable[0].id;
+  };
+
+  const mapApiCartToLocal = (apiCart) => {
+    if (!apiCart || !Array.isArray(apiCart.items)) return [];
+    return apiCart.items.map(item => {
+      // API response format: { variantId, productName, variantName, quantity, unitPrice, subtotal, imageUrl, available }
+      const variantId = item.variantId;
+      const productName = item.productName || "Product";
+      const variantName = item.variantName || "Standard";
+      const price = item.unitPrice || 0;
+      const img = item.imageUrl || "";
+
+      // Try to find a matching frontend product for category/local image
+      const matchedFrontend = ALL_PRODUCTS.find(p =>
+        productName.toLowerCase().includes(p.name.toLowerCase()) ||
+        p.name.toLowerCase().includes(productName.toLowerCase())
+      );
+
+      return {
+        id: variantId,
+        variantId,
+        cartItemId: String(variantId),
+        name: productName,
+        category: matchedFrontend?.category || "",
+        img: img || matchedFrontend?.img || "",
+        selectedVariant: variantName,
+        price,
+        quantity: item.quantity || 1,
+      };
+    });
+  };
+
+  const fetchCart = async () => {
+    if (!apiToken) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/cart`, {
+        headers: { "Authorization": `Bearer ${apiToken}` }
+      });
+      if (!res.ok) throw new Error("Failed to fetch cart");
+      const json = await res.json();
+      console.log("[Cart FETCH] Raw:", JSON.stringify(json, null, 2));
+      const cartData = json.cart || json.data || json;
+      const items = mapApiCartToLocal(cartData);
+      if (items.length > 0 || (cartData && Array.isArray(cartData.items))) {
+        setCart(items);
+      }
+    } catch (err) {
+      console.error("Error fetching cart:", err);
+    }
+  };
+
+  // Fetch cart when token changes (login/logout)
+  useEffect(() => {
+    if (apiToken) fetchCart();
+  }, [apiToken]);
+
   // Sync addresses to localStorage
   useEffect(() => {
     localStorage.setItem("svasthya_addresses", JSON.stringify(addresses));
@@ -132,12 +241,15 @@ function App() {
 
     const fetchLatestProfile = async () => {
       try {
-        const res = await fetch("http://65.1.85.74:8082/api/v1/users/profile", {
+        const res = await fetch(`${API_BASE}/api/v1/users/profile`, {
           headers: { "Authorization": `Bearer ${apiToken}` }
         });
-        if (!res.ok) throw new Error("Failed to fetch profile");
+        if (!res.ok) {
+          console.warn("[Profile SYNC] /api/v1/users/profile returned", res.status, "— backend profile API may be down. Using local data.");
+          return; // keep existing profile from localStorage / OTP response
+        }
         const json = await res.json();
-        console.log("[Profile SYNC] Raw JSON:", json);
+        console.log("[Profile SYNC] Parsed JSON:", JSON.stringify(json, null, 2));
         
         const data = json.user || json.data || json;
         if (data) {
@@ -252,7 +364,7 @@ function App() {
     }
 
     try {
-      const res = await fetch("http://65.1.85.74:8082/api/v1/users/profile", {
+      const res = await fetch(`${API_BASE}/api/v1/users/profile`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(newProfile),
@@ -307,11 +419,15 @@ function App() {
   const refreshProfile = async () => {
     if (!apiToken) return;
     try {
-      const res = await fetch("http://65.1.85.74:8082/api/v1/users/profile", {
+      const res = await fetch(`${API_BASE}/api/v1/users/profile`, {
         headers: { "Authorization": `Bearer ${apiToken}` }
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        console.warn("[Profile REFRESH] /api/v1/users/profile returned", res.status, "— using local data.");
+        return;
+      }
       const json = await res.json();
+      console.log("[Profile REFRESH] Raw JSON:", JSON.stringify(json, null, 2));
       const data = json.user || json.data || json;
       if (data) {
         let detectedName = data.name || data.full_name || data.fullName || data.user_name || data.username || "";
@@ -370,6 +486,10 @@ function App() {
     setApiTokenState(null);
     setProfile({});
     setAddresses([]);
+    // Clear cart on server
+    if (apiToken) {
+      fetch(`${API_BASE}/api/v1/cart/clear`, { method: "DELETE", headers: { "Authorization": `Bearer ${apiToken}` } }).catch(() => {});
+    }
     setCart([]);
     setCurrentPage("auth");
   };
@@ -437,7 +557,8 @@ function App() {
       setShowProfileModal(true);
     } else {
       // Existing user sign-in: extract user data from verify-otp response first
-      const userData = responseData?.user || responseData?.data?.user || responseData?.data || {};
+      // Response may nest under .user/.data, or fields may be at top level
+      const userData = responseData?.user || responseData?.data?.user || responseData?.data || responseData || {};
       const initialProfile = {
         name: userData.name || userData.fullName || userData.full_name || fullName || "Valued Member",
         email: userData.email || "",
@@ -445,6 +566,8 @@ function App() {
         dob: userData.dateOfBirth || userData.dob || userData.birthDate || "",
         phone: userData.mobileNumber || userData.phone || userData.mobile || phone,
       };
+      console.log("[Auth] responseData:", JSON.stringify(responseData, null, 2));
+      console.log("[Auth] initialProfile:", JSON.stringify(initialProfile, null, 2));
       setProfile(initialProfile);
       localStorage.setItem("svasthya_profile", JSON.stringify(initialProfile));
       setUser({ name: initialProfile.name, email: initialProfile.email, phone: initialProfile.phone });
@@ -453,12 +576,12 @@ function App() {
       // Fetch full profile from backend API for complete/updated data
       if (token) {
         try {
-          const res = await fetch("http://65.1.85.74:8082/api/v1/users/profile", {
+          const res = await fetch(`${API_BASE}/api/v1/users/profile`, {
             headers: { "Authorization": `Bearer ${token}` }
           });
           if (res.ok) {
             const json = await res.json();
-            console.log("[Auth] Profile Fetch JSON:", json);
+            console.log("[Auth] Profile Fetch JSON:", JSON.stringify(json, null, 2));
             const data = json.user || json.data || json;
             if (data) {
               let detectedName = data.name || data.full_name || data.fullName || data.user_name || data.username || initialProfile.name;
@@ -506,46 +629,117 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const addToCart = (product, selectedVariant) => {
-    setCart(prevCart => {
-      const variantLabel = selectedVariant?.label || 'Standard';
-      const cartItemId = `${product.id}-${variantLabel}`;
+  const addToCart = async (product, selectedVariant) => {
+    const variantLabel = selectedVariant?.label || 'Standard';
+    const backendVid = selectedVariant?.variantId || selectedVariant?.id || getBackendVariantId(product, variantLabel);
+    console.log("[Cart ADD] product:", product.name, "variant:", variantLabel, "backendVid:", backendVid, "type:", typeof backendVid, "backendProducts loaded:", backendProducts.length);
 
-      const existingItem = prevCart.find(item => item.cartItemId === cartItemId);
-      if (existingItem) {
-        return prevCart.map(item =>
-          item.cartItemId === cartItemId
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      } else {
+    if (!apiToken || !backendVid || typeof backendVid !== 'number') {
+      // Fallback: local-only cart (no API token or no matching backend variant)
+      const cartItemId = `${product.id}-${variantLabel}`;
+      setCart(prevCart => {
+        const existingItem = prevCart.find(item => item.cartItemId === cartItemId);
+        if (existingItem) {
+          return prevCart.map(item =>
+            item.cartItemId === cartItemId ? { ...item, quantity: item.quantity + 1 } : item
+          );
+        }
         return [...prevCart, {
-          ...product,
-          cartItemId,
+          ...product, cartItemId, variantId: cartItemId,
           selectedVariant: variantLabel,
-          price: selectedVariant?.price || product.price,
-          quantity: 1
+          price: selectedVariant?.price || product.price, quantity: 1
         }];
-      }
-    });
+      });
+      if (apiToken) console.warn("[Cart ADD] No numeric backend variantId for", product.name, variantLabel);
+      return;
+    }
+
+    // API-first: call backend, then sync cart from server
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/cart/add`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiToken}` },
+        body: JSON.stringify({ variantId: backendVid, quantity: 1 })
+      });
+      const text = await res.text();
+      console.log("[Cart ADD] Status:", res.status, "Body:", text);
+      if (!res.ok) throw new Error(text || "Add to cart failed");
+      await fetchCart(); // sync from server
+    } catch (err) {
+      console.error("Error adding to cart:", err);
+    }
   };
 
-  const updateQuantity = (cartItemId, newQuantity) => {
+  const updateQuantity = async (cartItemId, newQuantity) => {
     if (newQuantity <= 0) {
       removeFromCart(cartItemId);
       return;
     }
+
+    const item = cart.find(i => i.cartItemId === cartItemId);
+    if (!item) {
+      console.error("[Cart UPDATE] Item not found for cartItemId:", cartItemId, "Cart items:", cart.map(i => ({ cartItemId: i.cartItemId, variantId: i.variantId, type: typeof i.variantId })));
+      return;
+    }
+
+    const oldQuantity = item.quantity;
+    const variantId = item.variantId;
+    console.log("[Cart UPDATE] cartItemId:", cartItemId, "variantId:", variantId, "type:", typeof variantId, "old:", oldQuantity, "new:", newQuantity);
+
+    // Optimistic local update
     setCart(prevCart =>
-      prevCart.map(item =>
-        item.cartItemId === cartItemId
-          ? { ...item, quantity: newQuantity }
-          : item
+      prevCart.map(i =>
+        i.cartItemId === cartItemId ? { ...i, quantity: newQuantity } : i
       )
     );
+
+    if (!apiToken || typeof variantId !== 'number') {
+      console.warn("[Cart UPDATE] Skipping API — apiToken:", !!apiToken, "variantId type:", typeof variantId);
+      return;
+    }
+
+    const isIncrement = newQuantity > oldQuantity;
+    const endpoint = isIncrement
+      ? `${API_BASE}/api/v1/cart/increment/${variantId}`
+      : `${API_BASE}/api/v1/cart/decrement/${variantId}`;
+
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${apiToken}` }
+      });
+      if (!res.ok) throw new Error("Update quantity failed");
+      await fetchCart();
+    } catch (err) {
+      console.error("Error updating quantity:", err);
+      setCart(prevCart =>
+        prevCart.map(i =>
+          i.cartItemId === cartItemId ? { ...i, quantity: oldQuantity } : i
+        )
+      );
+    }
   };
 
-  const removeFromCart = (cartItemId) => {
-    setCart(prevCart => prevCart.filter(item => item.cartItemId !== cartItemId));
+  const removeFromCart = async (cartItemId) => {
+    const item = cart.find(i => i.cartItemId === cartItemId);
+    const variantId = item?.variantId;
+
+    const prevCartSnapshot = [...cart];
+    setCart(prevCart => prevCart.filter(i => i.cartItemId !== cartItemId));
+
+    if (!apiToken || typeof variantId !== 'number') return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/cart/${variantId}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${apiToken}` }
+      });
+      if (!res.ok) throw new Error("Remove from cart failed");
+      await fetchCart();
+    } catch (err) {
+      console.error("Error removing from cart:", err);
+      setCart(prevCartSnapshot);
+    }
   };
 
   const toggleWishlist = (product) => {
@@ -1207,6 +1401,10 @@ function App() {
                 };
                 setOrders(prev => [newOrder, ...prev]);
                 setLastOrderId(newOrderId);
+                // Clear cart on server after order placed
+                if (apiToken) {
+                  fetch(`${API_BASE}/api/v1/cart/clear`, { method: "DELETE", headers: { "Authorization": `Bearer ${apiToken}` } }).catch(() => {});
+                }
                 setCart([]);
                 setCurrentPage("orderConfirmation");
                 window.scrollTo({ top: 0, behavior: "smooth" });

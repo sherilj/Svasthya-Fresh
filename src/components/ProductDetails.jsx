@@ -29,7 +29,7 @@ const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddT
 
     if (!product) return null;
 
-    const [isAdded, setIsAdded] = useState(cart?.some(item => item.id === product?.id) || false);
+    const [isAdded, setIsAdded] = useState(false);
     const [mainImage, setMainImage] = useState(product.img);
 
     const images = [product.img, product.img, product.img, product.img]; // Placeholder for more images
@@ -228,6 +228,11 @@ const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddT
         .filter(p => p.id !== product.id && p.category === product.category)
         .slice(0, 3);
 
+    // Reset isAdded when variant or product changes
+    React.useEffect(() => {
+        setIsAdded(false);
+    }, [selectedVariant, product]);
+
     return (
         <div className="product-details-container">
             {/* Breadcrumb / Back button */}
@@ -316,11 +321,27 @@ const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddT
 
                     <div className="pd-buy-block">
                         <div className="pd-quantity-selector">
-                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="qty-btn"><Minus size={16} /></button>
+                            <button
+                                onClick={() => {
+                                    if (quantity > 1) {
+                                        setQuantity(quantity - 1);
+                                    }
+                                }}
+                                className="qty-btn"
+                                disabled={quantity <= 1}
+                                style={quantity <= 1 ? { opacity: 0.35, cursor: 'not-allowed' } : { }}
+                            >
+                                <Minus size={16} />
+                            </button>
                             <span className="qty-val">{quantity}</span>
-                            <button onClick={() => {
-                                setQuantity(quantity + 1);
-                            }} className="qty-btn"><Plus size={16} /></button>
+                            <button
+                                onClick={() => {
+                                    setQuantity(quantity + 1);
+                                }}
+                                className="qty-btn"
+                            >
+                                <Plus size={16} />
+                            </button>
                         </div>
                         <button
                             className={`pd-add-to-cart ${isAdded ? 'added' : ''}`}
@@ -333,6 +354,7 @@ const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddT
                         >
                             {isAdded ? "ADDED TO CART" : "ADD TO CART"} {isAdded ? <CheckCircle size={18} color="#FFF" /> : <ChevronRight size={18} />}
                         </button>
+
                     </div>
 
                     <div className="pd-delivery-status">
