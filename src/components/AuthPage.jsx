@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
-import axios from "axios";
+import { sendOtp, verifyOtp } from "../api";
 
 const OTP_ATTEMPTS_KEY = "otp_attempts"; // will store object { [phone]: [timestamps] }
-const API_BASE_URL = "http://65.1.85.74:8082";
 
 const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword, setShowPassword, onOTPVerified }) => {
     const [stage, setStage] = useState("phone"); // 'phone' or 'otp'
@@ -94,7 +93,7 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
 
         setIsLoading(true);
         try {
-            await axios.post(`${API_BASE_URL}/api/v1/auth/send-otp`, {
+            await sendOtp({
                 mobileNumber: phoneKey,
                 name: !isSignIn ? name.trim() : undefined
             });
@@ -122,7 +121,7 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
 
         setIsLoading(true);
         try {
-            await axios.post(`${API_BASE_URL}/api/v1/auth/send-otp`, {
+            await sendOtp({
                 mobileNumber: phoneKey
             });
             recordAttempt(phoneKey);
@@ -150,13 +149,24 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
 
         setIsLoading(true);
         try {
-            const res = await axios.post(`${API_BASE_URL}/api/v1/auth/verify-otp`, {
+            const res = await verifyOtp({
                 mobileNumber: phoneKey,
                 otpCode: normalizedOtp,
                 name: !isSignIn ? name.trim() : undefined
             });
-            // Assume the API might set cookies or return a token, or we just proceed to app
-            const token = res.data?.token || res.data?.data?.token || res.data?.user?.token;
+            // Extract JWT token from any possible response shape
+            const resData = res.data || {};
+            const token = resData.token
+              || resData.data?.token
+              || resData.user?.token
+              || resData.data?.user?.token
+              || resData.accessToken
+              || resData.data?.accessToken
+              || resData.jwt
+              || resData.data?.jwt
+              || null;
+            console.log("[Auth] verify-otp full response:", JSON.stringify(resData, null, 2));
+            console.log("[Auth] Extracted token:", token ? token.substring(0, 20) + "..." : "NO TOKEN FOUND");
             // Also if response contains user name, grab it
             let fetchedName = name.trim();
             if (isSignIn) {

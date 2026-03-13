@@ -43,11 +43,92 @@ import AuthPage from "./components/AuthPage";
 import MyOrders from "./components/MyOrders";
 import SupportCenter from "./components/SupportCenter";
 import OrderTracking from "./components/OrderTracking";
+import {
+  addCartItem,
+  clearCart,
+  createAddress,
+  decrementCartItem,
+  editAddress,
+  getCart,
+  getAddresses,
+  getUserInfo,
+  getUserProfile,
+  incrementCartItem,
+  removeCartItem,
+  removeAddress,
+  updateUserProfile,
+} from "./api";
+
+// Helper: extract a single user object from any API response shape
+function extractUserFromResponse(json) {
+  if (!json) return null;
+  // Try common wrapper keys
+  let data = json.user || json.profile || json.data?.user || json.data?.profile || json.data || json;
+  // If it's an array (e.g. GET /users returns [user]), take the first element
+  if (Array.isArray(data)) data = data[0];
+  // If data.users is an array, take first
+  if (data?.users && Array.isArray(data.users)) data = data.users[0];
+  // Validate it's actually a user-like object (has at least one expected field)
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    const hasProfileField = data.name || data.fullName || data.full_name || data.email ||
+      data.gender || data.dob || data.dateOfBirth || data.mobileNumber || data.phone ||
+      data.firstName || data.first_name || data.username;
+    if (hasProfileField) return data;
+  }
+  // Fallback: if no wrapper worked but json itself has profile fields, use json directly
+  if (json.name || json.email || json.mobileNumber || json.phone || json.gender) return json;
+  return null;
+}
+
+// Helper: normalise user data into a consistent profile shape
+function normaliseProfile(data, fallback = {}) {
+  if (!data) return fallback;
+  let detectedName = data.name || data.full_name || data.fullName || data.user_name || data.username || "";
+  if (!detectedName && (data.firstName || data.first_name)) {
+    detectedName = `${data.firstName || data.first_name} ${data.lastName || data.last_name || ""}`.trim();
+  }
+  return {
+    name: detectedName || fallback.name || "",
+    email: data.email || data.emailAddress || data.email_address || fallback.email || "",
+    gender: data.gender || data.sex || fallback.gender || "",
+    dob: data.dateOfBirth || data.dob || data.birthDate || data.date_of_birth || data.birth_date || fallback.dob || "",
+    phone: data.mobileNumber || data.phone || data.mobile || data.mobile_number || data.phoneNumber || data.phone_number || fallback.phone || "",
+  };
+}
+
+function mapApiCartToLocal(apiCart) {
+  const items = apiCart?.items;
+  if (!Array.isArray(items)) return [];
+
+  return items.map((item) => ({
+    id: item.productId || item.product_id || item.variantId,
+    variantId: item.variantId || item.variant_id,
+    cartItemId: String(item.variantId || item.variant_id || item.productId || item.product_id || Date.now()),
+    name: item.productName || item.name || "Product",
+    category: item.category || "",
+    img: item.imageUrl || item.image || "",
+    selectedVariant: item.variantName || item.variant || "Standard",
+    price: item.unitPrice || item.price || 0,
+    quantity: item.quantity || 1,
+  }));
+}
 
 function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSignIn, setIsSignIn] = useState(true);
-  const [currentPage, setCurrentPage] = useState("auth");
+  const [currentPage, setCurrentPage] = useState(() => {
+    try {
+      const savedPage = localStorage.getItem("svasthya_current_page");
+      const hasUserSession = !!localStorage.getItem("svasthya_user");
+      const authOnlyPages = ["profile", "addresses", "myOrders", "support", "orderTracking", "checkout", "delivery", "payment", "orderConfirmation"];
+
+      if (!savedPage) return hasUserSession ? "landing" : "auth";
+      if (!hasUserSession && authOnlyPages.includes(savedPage)) return "auth";
+      return savedPage;
+    } catch {
+      return "auth";
+    }
+  });
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [cart, setCart] = useState([]);
@@ -117,119 +198,19 @@ function App() {
     localStorage.setItem("svasthya_orders", JSON.stringify(orders));
   }, [orders]);
 
-  // ─── Cart API helpers ───────────────────────────────────────────
-  const API_BASE = "http://65.1.85.74:8082";
-
-  // Backend products & variant ID lookup
-  const [backendProducts, setBackendProducts] = useState([]);
-
-  // Fetch backend products to get real variant IDs
-  useEffect(() => {
-    fetch(`${API_BASE}/api/v1/products`)
-      .then(res => res.ok ? res.json() : Promise.reject("Failed"))
-      .then(json => {
-        const products = json.data || json.products || [];
-        console.log("[Products] Fetched", products.length, "backend products");
-        setBackendProducts(products);
-      })
-      .catch(err => console.error("Error fetching backend products:", err));
-  }, []);
-
-  // Build a lookup: frontend product → backend variant id
-  // Only returns variants with stock (non-null stockQuantity) to avoid backend NullPointerException
-  const getBackendVariantId = (product, variantLabel) => {
-    if (!backendProducts.length) return null;
-    const pName = (product.name || "").toLowerCase();
-    const pCat = (product.category || "").toLowerCase();
-
-    // Find matching backend product by name, then by category keyword
-    const matched = backendProducts.find(bp => {
-      const bpName = (bp.name || "").toLowerCase();
-      return bpName === pName || pName.includes(bpName) || bpName.includes(pName);
-    }) || backendProducts.find(bp => {
-      const bpName = (bp.name || "").toLowerCase();
-      return bpName.includes(pCat) || pCat.includes(bpName);
-    });
-    if (!matched || !matched.variants || !matched.variants.length) return null;
-
-    // Only use variants with non-null stock — null stock crashes the backend
-    const usable = matched.variants.filter(v => v.stockQuantity != null && v.stockQuantity > 0 && v.isActive);
-    if (usable.length === 0) {
-      console.warn("[Cart] Backend product", matched.name, "has no usable variants (all have null/zero stock)");
-      return null;
-    }
-
-    // Try matching by variant label (e.g., "500g" ↔ "500")
-    const normalLabel = (variantLabel || "").toLowerCase().replace(/[^0-9a-z]/g, "");
-    const byLabel = usable.find(v => {
-      const vn = (v.variantName || "").toLowerCase().replace(/[^0-9a-z]/g, "");
-      return vn === normalLabel || normalLabel.includes(vn) || vn.includes(normalLabel);
-    });
-    if (byLabel) return byLabel.id;
-
-    // Default to first usable variant
-    console.log("[Cart] Matched", product.name, "→ backend:", matched.name, "variant:", usable[0].id);
-    return usable[0].id;
-  };
-
-  const mapApiCartToLocal = (apiCart) => {
-    if (!apiCart || !Array.isArray(apiCart.items)) return [];
-    return apiCart.items.map(item => {
-      // API response format: { variantId, productName, variantName, quantity, unitPrice, subtotal, imageUrl, available }
-      const variantId = item.variantId;
-      const productName = item.productName || "Product";
-      const variantName = item.variantName || "Standard";
-      const price = item.unitPrice || 0;
-      const img = item.imageUrl || "";
-
-      // Try to find a matching frontend product for category/local image
-      const matchedFrontend = ALL_PRODUCTS.find(p =>
-        productName.toLowerCase().includes(p.name.toLowerCase()) ||
-        p.name.toLowerCase().includes(productName.toLowerCase())
-      );
-
-      return {
-        id: variantId,
-        variantId,
-        cartItemId: String(variantId),
-        name: productName,
-        category: matchedFrontend?.category || "",
-        img: img || matchedFrontend?.img || "",
-        selectedVariant: variantName,
-        price,
-        quantity: item.quantity || 1,
-      };
-    });
-  };
-
-  const fetchCart = async () => {
-    if (!apiToken) return;
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/cart`, {
-        headers: { "Authorization": `Bearer ${apiToken}` }
-      });
-      if (!res.ok) throw new Error("Failed to fetch cart");
-      const json = await res.json();
-      console.log("[Cart FETCH] Raw:", JSON.stringify(json, null, 2));
-      const cartData = json.cart || json.data || json;
-      const items = mapApiCartToLocal(cartData);
-      if (items.length > 0 || (cartData && Array.isArray(cartData.items))) {
-        setCart(items);
-      }
-    } catch (err) {
-      console.error("Error fetching cart:", err);
-    }
-  };
-
-  // Fetch cart when token changes (login/logout)
-  useEffect(() => {
-    if (apiToken) fetchCart();
-  }, [apiToken]);
-
   // Sync addresses to localStorage
   useEffect(() => {
     localStorage.setItem("svasthya_addresses", JSON.stringify(addresses));
   }, [addresses]);
+
+  // Persist current page so refresh restores navigation state
+  useEffect(() => {
+    try {
+      localStorage.setItem("svasthya_current_page", currentPage);
+    } catch (e) {
+      // no-op
+    }
+  }, [currentPage]);
 
   // Fetch profile and addresses from API on mount or when token changes
   useEffect(() => {
@@ -241,31 +222,15 @@ function App() {
 
     const fetchLatestProfile = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/v1/users/profile`, {
-          headers: { "Authorization": `Bearer ${apiToken}` }
-        });
-        if (!res.ok) {
-          console.warn("[Profile SYNC] /api/v1/users/profile returned", res.status, "— backend profile API may be down. Using local data.");
-          return; // keep existing profile from localStorage / OTP response
-        }
+        const res = await getUserProfile(apiToken);
+        if (!res.ok) throw new Error("Failed to fetch profile");
         const json = await res.json();
-        console.log("[Profile SYNC] Parsed JSON:", JSON.stringify(json, null, 2));
+        console.log("[Profile SYNC] Raw JSON:", JSON.stringify(json, null, 2));
         
-        const data = json.user || json.data || json;
+        const data = extractUserFromResponse(json);
+        console.log("[Profile SYNC] Extracted data:", JSON.stringify(data, null, 2));
         if (data) {
-          // Robust name detection: check for fullName, first+last, username, etc.
-          let detectedName = data.name || data.full_name || data.fullName || data.user_name || data.username || "";
-          if (!detectedName && (data.firstName || data.first_name)) {
-            detectedName = `${data.firstName || data.first_name} ${data.lastName || data.last_name || ""}`.trim();
-          }
-
-          const normalised = {
-            name: detectedName,
-            email: data.email || "",
-            gender: data.gender || "",
-            dob: data.dateOfBirth || data.dob || data.birthDate || "",
-            phone: data.mobileNumber || data.phone || data.mobile || "",
-          };
+          const normalised = normaliseProfile(data);
           console.log("[Profile SYNC] Normalised:", normalised);
           setProfile(normalised);
           localStorage.setItem("svasthya_profile", JSON.stringify(normalised));
@@ -275,7 +240,7 @@ function App() {
               ...prev,
               name: normalised.name || (prev && prev.name) || "Member",
               email: normalised.email || (prev && prev.email),
-              phone: normalised.phone || (prev && prev.phone) || phone
+              phone: normalised.phone || (prev && prev.phone)
             };
             localStorage.setItem("svasthya_user", JSON.stringify(updated));
             return updated;
@@ -286,12 +251,32 @@ function App() {
       }
     };
 
+    // Fetch user_id and other account-level info from GET /api/v1/users
+    const fetchUserInfo = async () => {
+      try {
+        const res = await getUserInfo(apiToken);
+        if (!res.ok) return;
+        const json = await res.json();
+        console.log("[User INFO] Raw JSON:", json);
+        const data = extractUserFromResponse(json);
+        if (data) {
+          const userId = data.id || data._id || data.userId || data.user_id || "";
+          setUser(prev => {
+            const updated = { ...prev, userId };
+            localStorage.setItem("svasthya_user", JSON.stringify(updated));
+            return updated;
+          });
+        }
+      } catch (err) {
+        console.error("Fetch user info error:", err);
+      }
+    };
+
     fetchLatestProfile();
+    fetchUserInfo();
 
     // Fetch Addresses
-    fetch("http://65.1.85.74:8082/api/v1/addresses", {
-      headers: { "Authorization": `Bearer ${apiToken}` }
-    })
+    getAddresses(apiToken)
       .then(res => {
         if (!res.ok) throw new Error("Failed to fetch addresses");
         return res.json();
@@ -324,6 +309,27 @@ function App() {
         setAddresses(formatted);
       })
       .catch(err => console.error("Error fetching addresses:", err));
+  }, [apiToken]);
+
+  // Sync cart from API on token change
+  useEffect(() => {
+    const fetchCartData = async () => {
+      if (!apiToken) return;
+      try {
+        const res = await getCart(apiToken);
+        if (!res.ok) return;
+        const json = await res.json();
+        const cartData = json.cart || json.data || json;
+        const mapped = mapApiCartToLocal(cartData);
+        if (mapped.length > 0 || Array.isArray(cartData?.items)) {
+          setCart(mapped);
+        }
+      } catch (err) {
+        console.error("Fetch cart error:", err);
+      }
+    };
+
+    fetchCartData();
   }, [apiToken]);
 
   // Restore session from localStorage on mount (kept intentionally simple)
@@ -364,11 +370,7 @@ function App() {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/api/v1/users/profile`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify(newProfile),
-      });
+      const res = await updateUserProfile(token, { name: newProfile.name, email: newProfile.email, gender: newProfile.gender, dob: newProfile.dob });
 
       if (!res.ok) {
         const text = await res.text();
@@ -376,22 +378,17 @@ function App() {
       }
 
       // prefer server response when available — unwrap nested response
-      let serverData = {};
+      let serverData = null;
       try {
         const json = await res.json();
-        serverData = json.user || json.data || json;
+        serverData = extractUserFromResponse(json);
       } catch (e) {
-        serverData = {};
+        serverData = null;
       }
 
       // Normalise API field names → frontend field names, fallback to what we sent
-      const normalised = {
-        name: serverData.name || serverData.full_name || serverData.fullName || newProfile.name,
-        email: serverData.email || newProfile.email,
-        gender: serverData.gender || newProfile.gender,
-        dob: serverData.dateOfBirth || serverData.dob || serverData.birthDate || newProfile.dob,
-        phone: serverData.mobileNumber || serverData.phone || serverData.mobile || (profile || {}).phone,
-      };
+      const fallback = { ...newProfile, phone: (profile || {}).phone };
+      const normalised = normaliseProfile(serverData, fallback);
 
       const merged = { ...(profile || {}), ...normalised };
       setProfile(merged);
@@ -419,28 +416,14 @@ function App() {
   const refreshProfile = async () => {
     if (!apiToken) return;
     try {
-      const res = await fetch(`${API_BASE}/api/v1/users/profile`, {
-        headers: { "Authorization": `Bearer ${apiToken}` }
-      });
-      if (!res.ok) {
-        console.warn("[Profile REFRESH] /api/v1/users/profile returned", res.status, "— using local data.");
-        return;
-      }
+      const res = await getUserProfile(apiToken);
+      if (!res.ok) return;
       const json = await res.json();
-      console.log("[Profile REFRESH] Raw JSON:", JSON.stringify(json, null, 2));
-      const data = json.user || json.data || json;
+      console.log("[Profile REFRESH] Raw JSON:", json);
+      const data = extractUserFromResponse(json);
       if (data) {
-        let detectedName = data.name || data.full_name || data.fullName || data.user_name || data.username || "";
-        if (!detectedName && (data.firstName || data.first_name)) {
-          detectedName = `${data.firstName || data.first_name} ${data.lastName || data.last_name || ""}`.trim();
-        }
-        const normalised = {
-          name: detectedName,
-          email: data.email || "",
-          gender: data.gender || "",
-          dob: data.dateOfBirth || data.dob || data.birthDate || "",
-          phone: data.mobileNumber || data.phone || data.mobile || "",
-        };
+        const normalised = normaliseProfile(data);
+        console.log("[Profile REFRESH] Normalised:", normalised);
         setProfile(normalised);
         localStorage.setItem("svasthya_profile", JSON.stringify(normalised));
         setUser(prev => {
@@ -486,9 +469,8 @@ function App() {
     setApiTokenState(null);
     setProfile({});
     setAddresses([]);
-    // Clear cart on server
     if (apiToken) {
-      fetch(`${API_BASE}/api/v1/cart/clear`, { method: "DELETE", headers: { "Authorization": `Bearer ${apiToken}` } }).catch(() => {});
+      clearCart(apiToken).catch(() => { });
     }
     setCart([]);
     setCurrentPage("auth");
@@ -532,9 +514,28 @@ function App() {
   };
 
   const handleOTPVerified = async (phone, fullName, token, isSignInAction, responseData) => {
-    if (token) {
-      setApiTokenState(token);
-      localStorage.setItem("svasthya_token", token);
+    console.log("[handleOTPVerified] token received:", token ? token.substring(0, 20) + "..." : "NONE");
+    console.log("[handleOTPVerified] isSignInAction:", isSignInAction);
+    console.log("[handleOTPVerified] responseData:", JSON.stringify(responseData, null, 2));
+
+    // Fallback: try to extract token from responseData if not passed directly
+    let authToken = token;
+    if (!authToken && responseData) {
+      authToken = responseData.token
+        || responseData.data?.token
+        || responseData.user?.token
+        || responseData.data?.user?.token
+        || responseData.accessToken
+        || responseData.data?.accessToken
+        || null;
+      if (authToken) console.log("[handleOTPVerified] Token found via fallback extraction");
+    }
+
+    if (authToken) {
+      setApiTokenState(authToken);
+      localStorage.setItem("svasthya_token", authToken);
+    } else {
+      console.warn("[handleOTPVerified] No JWT token found — profile fetch will be skipped!");
     }
     
     // Initial user object from verification step
@@ -557,8 +558,7 @@ function App() {
       setShowProfileModal(true);
     } else {
       // Existing user sign-in: extract user data from verify-otp response first
-      // Response may nest under .user/.data, or fields may be at top level
-      const userData = responseData?.user || responseData?.data?.user || responseData?.data || responseData || {};
+      const userData = responseData?.user || responseData?.data?.user || responseData?.data || {};
       const initialProfile = {
         name: userData.name || userData.fullName || userData.full_name || fullName || "Valued Member",
         email: userData.email || "",
@@ -566,36 +566,24 @@ function App() {
         dob: userData.dateOfBirth || userData.dob || userData.birthDate || "",
         phone: userData.mobileNumber || userData.phone || userData.mobile || phone,
       };
-      console.log("[Auth] responseData:", JSON.stringify(responseData, null, 2));
-      console.log("[Auth] initialProfile:", JSON.stringify(initialProfile, null, 2));
       setProfile(initialProfile);
       localStorage.setItem("svasthya_profile", JSON.stringify(initialProfile));
       setUser({ name: initialProfile.name, email: initialProfile.email, phone: initialProfile.phone });
       localStorage.setItem("svasthya_user", JSON.stringify({ name: initialProfile.name, email: initialProfile.email, phone: initialProfile.phone }));
 
       // Fetch full profile from backend API for complete/updated data
-      if (token) {
+      if (authToken) {
         try {
-          const res = await fetch(`${API_BASE}/api/v1/users/profile`, {
-            headers: { "Authorization": `Bearer ${token}` }
-          });
+          const res = await getUserProfile(authToken);
+          console.log("[Auth] Profile fetch status:", res.status);
           if (res.ok) {
             const json = await res.json();
             console.log("[Auth] Profile Fetch JSON:", JSON.stringify(json, null, 2));
-            const data = json.user || json.data || json;
+            const data = extractUserFromResponse(json);
+            console.log("[Auth] Extracted data:", JSON.stringify(data, null, 2));
             if (data) {
-              let detectedName = data.name || data.full_name || data.fullName || data.user_name || data.username || initialProfile.name;
-              if (detectedName === initialProfile.name && (data.firstName || data.first_name)) {
-                detectedName = `${data.firstName || data.first_name} ${data.lastName || data.last_name || ""}`.trim();
-              }
-              const normalised = {
-                name: detectedName,
-                email: data.email || initialProfile.email,
-                gender: data.gender || initialProfile.gender,
-                dob: data.dateOfBirth || data.dob || data.birthDate || initialProfile.dob,
-                phone: data.mobileNumber || data.phone || data.mobile || initialProfile.phone,
-              };
-              console.log("[Auth] Normalised Profile:", normalised);
+              const normalised = normaliseProfile(data, initialProfile);
+              console.log("[Auth] Normalised Profile:", JSON.stringify(normalised, null, 2));
               setProfile(normalised);
               localStorage.setItem("svasthya_profile", JSON.stringify(normalised));
               const updatedUser = {
@@ -606,9 +594,32 @@ function App() {
               setUser(updatedUser);
               localStorage.setItem("svasthya_user", JSON.stringify(updatedUser));
             }
+          } else {
+            const errText = await res.text();
+            console.error("[Auth] Profile fetch failed with status:", res.status, errText);
           }
         } catch (err) {
           console.error("[Auth] Profile fetch failed:", err);
+        }
+
+        // Also fetch user_id from GET /api/v1/users
+        try {
+          const userRes = await getUserInfo(authToken);
+          if (userRes.ok) {
+            const userJson = await userRes.json();
+            console.log("[Auth] User Info JSON:", JSON.stringify(userJson, null, 2));
+            const userData2 = extractUserFromResponse(userJson);
+            if (userData2) {
+              const userId = userData2.id || userData2._id || userData2.userId || userData2.user_id || "";
+              setUser(prev => {
+                const updated = { ...prev, userId };
+                localStorage.setItem("svasthya_user", JSON.stringify(updated));
+                return updated;
+              });
+            }
+          }
+        } catch (err) {
+          console.error("[Auth] User info fetch failed:", err);
         }
       }
       setShowProfileModal(false);
@@ -631,90 +642,84 @@ function App() {
 
   const addToCart = async (product, selectedVariant) => {
     const variantLabel = selectedVariant?.label || 'Standard';
-    const backendVid = selectedVariant?.variantId || selectedVariant?.id || getBackendVariantId(product, variantLabel);
-    console.log("[Cart ADD] product:", product.name, "variant:", variantLabel, "backendVid:", backendVid, "type:", typeof backendVid, "backendProducts loaded:", backendProducts.length);
+    const variantId = selectedVariant?.variantId || selectedVariant?.id || product?.variantId || product?.id;
 
-    if (!apiToken || !backendVid || typeof backendVid !== 'number') {
-      // Fallback: local-only cart (no API token or no matching backend variant)
-      const cartItemId = `${product.id}-${variantLabel}`;
+    // Local optimistic behavior (kept as fallback)
+    const applyLocalAdd = () => {
       setCart(prevCart => {
+        const cartItemId = `${product.id}-${variantLabel}`;
         const existingItem = prevCart.find(item => item.cartItemId === cartItemId);
         if (existingItem) {
           return prevCart.map(item =>
-            item.cartItemId === cartItemId ? { ...item, quantity: item.quantity + 1 } : item
+            item.cartItemId === cartItemId
+              ? { ...item, quantity: item.quantity + 1 }
+              : item
           );
         }
         return [...prevCart, {
-          ...product, cartItemId, variantId: cartItemId,
+          ...product,
+          variantId,
+          cartItemId,
           selectedVariant: variantLabel,
-          price: selectedVariant?.price || product.price, quantity: 1
+          price: selectedVariant?.price || product.price,
+          quantity: 1
         }];
       });
-      if (apiToken) console.warn("[Cart ADD] No numeric backend variantId for", product.name, variantLabel);
+    };
+
+    if (!apiToken || !variantId) {
+      applyLocalAdd();
       return;
     }
 
-    // API-first: call backend, then sync cart from server
     try {
-      const res = await fetch(`${API_BASE}/api/v1/cart/add`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiToken}` },
-        body: JSON.stringify({ variantId: backendVid, quantity: 1 })
-      });
-      const text = await res.text();
-      console.log("[Cart ADD] Status:", res.status, "Body:", text);
-      if (!res.ok) throw new Error(text || "Add to cart failed");
-      await fetchCart(); // sync from server
+      const res = await addCartItem(apiToken, { variantId, quantity: 1 });
+      if (!res.ok) throw new Error("Add to cart failed");
+      const cartRes = await getCart(apiToken);
+      if (!cartRes.ok) throw new Error("Failed to fetch cart");
+      const json = await cartRes.json();
+      const cartData = json.cart || json.data || json;
+      setCart(mapApiCartToLocal(cartData));
     } catch (err) {
-      console.error("Error adding to cart:", err);
+      console.error("Add cart item error:", err);
+      applyLocalAdd();
     }
   };
 
   const updateQuantity = async (cartItemId, newQuantity) => {
+    const item = cart.find(i => i.cartItemId === cartItemId);
+    const variantId = item?.variantId;
+
     if (newQuantity <= 0) {
       removeFromCart(cartItemId);
       return;
     }
 
-    const item = cart.find(i => i.cartItemId === cartItemId);
-    if (!item) {
-      console.error("[Cart UPDATE] Item not found for cartItemId:", cartItemId, "Cart items:", cart.map(i => ({ cartItemId: i.cartItemId, variantId: i.variantId, type: typeof i.variantId })));
-      return;
-    }
-
-    const oldQuantity = item.quantity;
-    const variantId = item.variantId;
-    console.log("[Cart UPDATE] cartItemId:", cartItemId, "variantId:", variantId, "type:", typeof variantId, "old:", oldQuantity, "new:", newQuantity);
-
-    // Optimistic local update
+    // Local optimistic behavior
     setCart(prevCart =>
-      prevCart.map(i =>
-        i.cartItemId === cartItemId ? { ...i, quantity: newQuantity } : i
+      prevCart.map(item =>
+        item.cartItemId === cartItemId
+          ? { ...item, quantity: newQuantity }
+          : item
       )
     );
 
-    if (!apiToken || typeof variantId !== 'number') {
-      console.warn("[Cart UPDATE] Skipping API — apiToken:", !!apiToken, "variantId type:", typeof variantId);
-      return;
-    }
-
-    const isIncrement = newQuantity > oldQuantity;
-    const endpoint = isIncrement
-      ? `${API_BASE}/api/v1/cart/increment/${variantId}`
-      : `${API_BASE}/api/v1/cart/decrement/${variantId}`;
+    if (!apiToken || !variantId) return;
 
     try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${apiToken}` }
-      });
+      const isIncrement = newQuantity > (item?.quantity || 0);
+      const res = isIncrement
+        ? await incrementCartItem(apiToken, variantId)
+        : await decrementCartItem(apiToken, variantId);
       if (!res.ok) throw new Error("Update quantity failed");
-      await fetchCart();
     } catch (err) {
-      console.error("Error updating quantity:", err);
+      console.error("Update cart quantity error:", err);
+      // rollback optimistic update
       setCart(prevCart =>
-        prevCart.map(i =>
-          i.cartItemId === cartItemId ? { ...i, quantity: oldQuantity } : i
+        prevCart.map(it =>
+          it.cartItemId === cartItemId
+            ? { ...it, quantity: item.quantity }
+            : it
         )
       );
     }
@@ -723,22 +728,18 @@ function App() {
   const removeFromCart = async (cartItemId) => {
     const item = cart.find(i => i.cartItemId === cartItemId);
     const variantId = item?.variantId;
+    const previous = [...cart];
 
-    const prevCartSnapshot = [...cart];
-    setCart(prevCart => prevCart.filter(i => i.cartItemId !== cartItemId));
+    setCart(prevCart => prevCart.filter(item => item.cartItemId !== cartItemId));
 
-    if (!apiToken || typeof variantId !== 'number') return;
+    if (!apiToken || !variantId) return;
 
     try {
-      const res = await fetch(`${API_BASE}/api/v1/cart/${variantId}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${apiToken}` }
-      });
-      if (!res.ok) throw new Error("Remove from cart failed");
-      await fetchCart();
+      const res = await removeCartItem(apiToken, variantId);
+      if (!res.ok) throw new Error("Remove item failed");
     } catch (err) {
-      console.error("Error removing from cart:", err);
-      setCart(prevCartSnapshot);
+      console.error("Remove cart item error:", err);
+      setCart(previous);
     }
   };
 
@@ -786,11 +787,7 @@ function App() {
 
         console.log("[Address ADD] Payload:", JSON.stringify(payload, null, 2));
 
-        const res = await fetch("http://65.1.85.74:8082/api/v1/addresses", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiToken}` },
-          body: JSON.stringify(payload)
-        });
+        const res = await createAddress(apiToken, payload);
         if (!res.ok) {
           const errText = await res.text();
           throw new Error(errText || "Failed to add address");
@@ -867,11 +864,7 @@ function App() {
 
         console.log("[Address UPDATE] Payload:", JSON.stringify(payload, null, 2));
 
-        const res = await fetch(`http://65.1.85.74:8082/api/v1/addresses/${addressId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiToken}` },
-          body: JSON.stringify(payload)
-        });
+        const res = await editAddress(apiToken, addressId, payload);
         if (!res.ok) {
           const errText = await res.text();
           throw new Error(errText || "Failed to update address");
@@ -918,10 +911,7 @@ function App() {
     try {
       if (apiToken) {
         setSaveSuccessMessage("Deleting address...");
-        const res = await fetch(`http://65.1.85.74:8082/api/v1/addresses/${id}`, {
-          method: "DELETE",
-          headers: { "Authorization": `Bearer ${apiToken}` }
-        });
+        const res = await removeAddress(apiToken, id);
         if (!res.ok) throw new Error("Failed to delete address");
         setSaveSuccessMessage("Address deleted successfully!");
         setTimeout(() => setSaveSuccessMessage(""), 2000);
@@ -1401,9 +1391,8 @@ function App() {
                 };
                 setOrders(prev => [newOrder, ...prev]);
                 setLastOrderId(newOrderId);
-                // Clear cart on server after order placed
                 if (apiToken) {
-                  fetch(`${API_BASE}/api/v1/cart/clear`, { method: "DELETE", headers: { "Authorization": `Bearer ${apiToken}` } }).catch(() => {});
+                  clearCart(apiToken).catch(() => { });
                 }
                 setCart([]);
                 setCurrentPage("orderConfirmation");
